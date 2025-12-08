@@ -150,7 +150,7 @@ def ve_do_thi_ly_thuyet(do_thi, duong_di=None, danh_sach_canh=None, tieu_de=""):
     st.pyplot(hinh_ve)
 
 # -----------------------------------------------------------------------------
-# HÀM XỬ LÝ 3: THUẬT TOÁN FLEURY (FIX LỖI BRIDGE)
+# HÀM XỬ LÝ 3: THUẬT TOÁN FLEURY
 # -----------------------------------------------------------------------------
 def thuat_toan_fleury(G_input):
     """
@@ -193,7 +193,7 @@ def thuat_toan_fleury(G_input):
     return edges_path, "Thành công"
 
 # -----------------------------------------------------------------------------
-# HÀM HỖ TRỢ: VẼ CÁC NÚT (NODES) LÊN BẢN ĐỒ
+# HÀM HỖ TRỢTRỢ
 # -----------------------------------------------------------------------------
 def them_cac_nut_len_ban_do(ban_do, do_thi):
     # Vẽ các chấm tròn màu xám (Nodes)
@@ -217,7 +217,7 @@ st.title("🏙️ ỨNG DỤNG THUẬT TOÁN CHO HỆ THỐNG DẪN ĐƯỜNG TP
 tab_ly_thuyet, tab_ban_do = st.tabs(["📚 PHẦN 1: LÝ THUYẾT ĐỒ THỊ", "🚀 PHẦN 2: BẢN ĐỒ THỰC TẾ"])
 
 # =============================================================================
-# TAB 1: LÝ THUYẾT (CƠ BẢN & NÂNG CAO - ĐỦ 7.1 -> 7.5)
+# TAB 1: LÝ THUYẾT
 # =============================================================================
 with tab_ly_thuyet:
     cot_trai, cot_phai = st.columns([1, 1.5])
@@ -328,7 +328,7 @@ with tab_ly_thuyet:
                     else: st.error("Lỗi: Chỉ áp dụng cho đồ thị Vô hướng & Liên thông")
             
             # 7.3: Ford-Fulkerson (Max Flow)
-            if st.button("7.3 Ford-Fulkerson (Max Flow)"):
+            if st.button("Ford-Fulkerson"):
                 is_directed_actual = st.session_state['do_thi'].is_directed()
                 if is_directed_actual:
                     try:
@@ -348,7 +348,7 @@ with tab_ly_thuyet:
 
             # 7.4 FLEURY
             with col_fleury:
-                if st.button("7.4 Fleury (Cơ bản)"):
+                if st.button("Fleury"):
                     if st.session_state['do_thi'].is_directed():
                         st.error("Fleury cơ bản chỉ áp dụng cho VÔ HƯỚNG để minh họa rõ nhất việc 'né cầu'.")
                     elif not nx.is_connected(st.session_state['do_thi']):
@@ -363,7 +363,7 @@ with tab_ly_thuyet:
             
             # 7.5 HIERHOLZER
             with col_hierholzer:
-                if st.button("7.5 Hierholzer (Tối ưu)"):
+                if st.button("Hierholzer"):
                     try:
                         if nx.is_eulerian(st.session_state['do_thi']):
                             ct = list(nx.eulerian_circuit(st.session_state['do_thi']))
@@ -392,10 +392,10 @@ with tab_ban_do:
 
     # DANH SÁCH ~100 ĐỊA ĐIỂM
     ds_dia_diem = {
-        "--- HÀNH CHÍNH ---": (0, 0), "Quảng trường Đại Đoàn Kết": (13.9786, 108.0048), "UBND Tỉnh Gia Lai": (13.9792, 108.0039),
+        "--- HÀNH CHÍNH ---": (0, 0), "Quảng trường Đại Đoàn Kết": (13.98355, 108.0057), "UBND Tỉnh Gia Lai": (13.9939, 108.0016),
         "Bưu điện Tỉnh": (13.9772, 108.0041), "Công an Tỉnh Gia Lai": (13.9778, 108.0025), "Bảo tàng Tỉnh Gia Lai": (13.9781, 108.0056),
         "Sở Giáo dục & Đào tạo": (13.9776, 108.0048), "Tỉnh ủy Gia Lai": (13.9805, 108.0045), "Sở Y Tế Gia Lai": (13.9765, 108.0035),
-        "Nhà Thi đấu Tỉnh": (13.9812, 108.0065), "Điện lực Gia Lai": (13.9755, 108.0040), "Trung tâm Văn hóa Thanh Thiếu Nhi": (13.9760, 108.0060),
+        "Nhà Thi đấu Tỉnh": (13.9809, 108.0043), "Điện lực Gia Lai": (13.9755, 108.0040), "Trung tâm Văn hóa Thanh Thiếu Nhi": (13.9760, 108.0060),
         "--- GIAO THÔNG ---": (0, 0), "Sân bay Pleiku": (14.0050, 108.0180), "Bến xe Đức Long": (13.9556, 108.0264), "Ngã 3 Hoa Lư": (13.9855, 108.0052),
         "Ngã 4 Biển Hồ": (14.0010, 108.0005), "Ngã 3 Phù Đổng": (13.9705, 108.0055), "Vòng xoay HAGL": (13.9762, 108.0032), "Ngã 3 Diệp Kính": (13.9750, 108.0010),
         "Cầu Phan Đình Phùng": (13.9680, 107.9980), "Ngã 4 Lâm Nghiệp": (13.9650, 108.0200),
@@ -538,3 +538,4 @@ with tab_ban_do:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="cartodbpositron")
         them_cac_nut_len_ban_do(m, Do_thi_Pleiku)
         st_folium(m, width=1200, height=600, returned_objects=[])
+
