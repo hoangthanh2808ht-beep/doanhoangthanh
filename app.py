@@ -48,7 +48,7 @@ st.markdown("""
     .dong-thoi-gian::before {
         content: ''; position: absolute; left: 19px; top: 35px; bottom: 0; width: 2px; background-color: #E0E0E0;
     }
-    .dong-thoi-gian:last-child::before { display: none; }
+    .dong-thoi_gian:last-child::before { display: none; }
 
     .icon-moc {
         flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%;
@@ -153,8 +153,9 @@ def ve_do_thi_ly_thuyet(do_thi, duong_di=None, danh_sach_canh=None, tieu_de=""):
         if danh_sach_canh:
             cac_nut = set()
             for u, v in danh_sach_canh:
-                cac_nut.add(u); cac_nut.add(v)
-            
+                cac_nut.add(u);
+                cac_nut.add(v)
+
             nx.draw_networkx_nodes(do_thi, vi_tri, nodelist=list(cac_nut), node_color='#E74C3C', node_size=700, ax=truc)
             nx.draw_networkx_edges(do_thi, vi_tri, edgelist=danh_sach_canh, width=3, edge_color='#E74C3C', ax=truc,
                                    arrows=is_directed)
@@ -189,7 +190,7 @@ def thuat_toan_fleury(G_input):
                 break
 
             G.remove_edge(u, v)
-            if nx.has_path(G, u, v): 
+            if nx.has_path(G, u, v):
                 next_v = v
                 G.add_edge(u, v)
                 break
@@ -205,6 +206,25 @@ def thuat_toan_fleury(G_input):
             u = next_v
 
     return edges_path, "Thành công"
+
+# HÀM 4: Tạo nền bản đồ (Switch giao diện Tối/Sáng/Vệ tinh)
+def tao_ban_do_nen(location, zoom_start, style):
+    if style == "Chế độ Tối (Dark)":
+        m = folium.Map(location=location, zoom_start=zoom_start, tiles='CartoDB dark_matter')
+        line_color = "#00FFFF"
+    elif style == "Chế độ Sáng (Light)":
+        m = folium.Map(location=location, zoom_start=zoom_start, tiles='CartoDB positron')
+        line_color = "#E74C3C"
+    elif style == "Vệ tinh (Satellite)":
+        m = folium.Map(location=location, zoom_start=zoom_start, tiles=None)
+        folium.TileLayer(tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr='Esri', name='Esri Satellite', overlay=False, control=True).add_to(m)
+        folium.TileLayer(tiles='https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', attr='Esri Labels', name='Esri Labels', overlay=True, control=True).add_to(m)
+        line_color = "#FFFF00"
+    else:
+        m = folium.Map(location=location, zoom_start=zoom_start, tiles="OpenStreetMap")
+        line_color = "#3498DB"
+    Fullscreen().add_to(m)
+    return m, line_color
 
 
 # -----------------------------------------------------------------------------
@@ -263,30 +283,30 @@ with tab_ly_thuyet:
     if len(st.session_state['do_thi']) > 0:
         st.divider()
         c1, c2, c3 = st.columns(3)
-        
+
         with c1:
             st.info("1. Biểu diễn dữ liệu ")
             dang_xem = st.selectbox("Chọn cách xem:", ["Ma trận kề", "Danh sách kề", "Danh sách cạnh"])
-            
+
             if dang_xem == "Ma trận kề":
                 df = pd.DataFrame(nx.adjacency_matrix(st.session_state['do_thi']).todense(),
-                                  index=st.session_state['do_thi'].nodes(), 
+                                  index=st.session_state['do_thi'].nodes(),
                                   columns=st.session_state['do_thi'].nodes())
                 st.dataframe(df, height=200, use_container_width=True)
-            
+
             elif dang_xem == "Danh sách kề":
                 adj_raw = nx.to_dict_of_dicts(st.session_state['do_thi'])
                 table_data = []
                 for node, neighbors in adj_raw.items():
                     neighbors_str = ", ".join([f"{n} (w={w.get('weight', 1)})" for n, w in neighbors.items()])
                     table_data.append({"Đỉnh nguồn": node, "Các đỉnh kề & Trọng số": neighbors_str})
-                
+
                 if table_data:
                     st.dataframe(pd.DataFrame(table_data), height=200, use_container_width=True, hide_index=True)
                 else:
                     st.warning("Đồ thị trống.")
-            
-            else: 
+
+            else:
                 data_canh = []
                 for u, v, data in st.session_state['do_thi'].edges(data=True):
                     data_canh.append({
@@ -294,7 +314,7 @@ with tab_ly_thuyet:
                         "Đỉnh cuối": v,
                         "Trọng số": data.get('weight', 1)
                     })
-                
+
                 if data_canh:
                     st.dataframe(pd.DataFrame(data_canh), height=200, use_container_width=True, hide_index=True)
                 else:
@@ -329,7 +349,7 @@ with tab_ly_thuyet:
             if st.button("Chạy Dijkstra (Ngắn nhất)"):
                 try:
                     duong_ngan_nhat = nx.shortest_path(st.session_state['do_thi'], nut_bat_dau, nut_ket_thuc,
-                                                      weight='weight')
+                                                       weight='weight')
                     ve_do_thi_ly_thuyet(st.session_state['do_thi'], duong_di=duong_ngan_nhat,
                                         tieu_de="Đường đi ngắn nhất (Dijkstra)")
                 except:
@@ -361,7 +381,7 @@ with tab_ly_thuyet:
                 if is_directed_actual:
                     try:
                         val, flow_dict = nx.maximum_flow(st.session_state['do_thi'], nut_bat_dau, nut_ket_thuc,
-                                                        capacity='weight')
+                                                         capacity='weight')
                         canh_luong = []
                         for u in flow_dict:
                             for v, f in flow_dict[u].items():
@@ -412,8 +432,9 @@ with tab_ly_thuyet:
 with tab_ban_do:
     @st.cache_resource
     def tai_ban_do_pleiku():
-        # Bán kính 3km (Tối ưu tốc độ)
-        return ox.graph_from_point((13.9800, 108.0000), dist=3000, network_type='drive')
+        # LỖI #1: Đã sửa DIST từ 3000 -> 5000 để tăng sự ổn định và bao phủ bản đồ
+        return ox.graph_from_point((13.9800, 108.0000), dist=5000, network_type='drive')
+
 
     with st.spinner("Đang tải dữ liệu bản đồ TP. Pleiku (Khoảng 45 giây)..."):
         try:
@@ -427,14 +448,14 @@ with tab_ban_do:
     # Thay vào đó là Form nhập liệu tìm kiếm (Geocoding)
 
     st.markdown("### 🔍 Nhập tên địa điểm (Ví dụ: Chợ Pleiku, Sân vận động,...)")
-    
+
     with st.form("form_tim_duong"):
         c1, c2, c3 = st.columns([1.5, 1.5, 1])
-        
+
         # Nhập tên thay vì chọn list
         start_query = c1.text_input("📍 Điểm xuất phát:", value="Quảng trường Đại Đoàn Kết")
         end_query = c2.text_input("🏁 Điểm đến:", value="Sân bay Pleiku")
-        
+
         thuat_toan_tim_duong = c3.selectbox("Thuật toán:", ["Dijkstra", "BFS", "DFS"])
         nut_tim_duong = st.form_submit_button("🚀 TÌM ĐƯỜNG NGAY", type="primary", use_container_width=True)
 
@@ -442,12 +463,10 @@ with tab_ban_do:
         with st.spinner(f"Đang tìm vị trí '{start_query}' và '{end_query}' trên bản đồ..."):
             try:
                 # 1. TÌM TỌA ĐỘ TỪ TÊN (GEOCODING)
-                # Thêm hậu tố Gia Lai, Vietnam để tìm chính xác hơn
                 try:
                     q_start = start_query if "Gia Lai" in start_query else f"{start_query}, Gia Lai, Vietnam"
                     q_end = end_query if "Gia Lai" in end_query else f"{end_query}, Gia Lai, Vietnam"
-                    
-                    # ox.geocode trả về (lat, lon)
+
                     start_point = ox.geocode(q_start)
                     end_point = ox.geocode(q_end)
                 except Exception:
@@ -455,7 +474,6 @@ with tab_ban_do:
                     st.stop()
 
                 # 2. TÌM NODE TRÊN ĐỒ THỊ GẦN NHẤT
-                # Lưu ý: nearest_nodes nhận (G, X=Lon, Y=Lat)
                 nut_goc = ox.distance.nearest_nodes(Do_thi_Pleiku, start_point[1], start_point[0])
                 nut_dich = ox.distance.nearest_nodes(Do_thi_Pleiku, end_point[1], end_point[0])
 
@@ -468,32 +486,34 @@ with tab_ban_do:
                         duong_di = nx.shortest_path(Do_thi_Pleiku, nut_goc, nut_dich, weight=None)
                     elif "DFS" in thuat_toan_tim_duong:
                         try:
-                            # DFS trong bản đồ thực tế rất nguy hiểm, cần giới hạn độ sâu
-                            duong_di = next(nx.all_simple_paths(Do_thi_Pleiku, nut_goc, nut_dich, cutoff=50))
+                            # LỖI #2: Đã sửa cutoff từ 50 -> 30 để DFS thất bại nhanh hơn (tránh treo máy)
+                            duong_di = next(nx.all_simple_paths(Do_thi_Pleiku, nut_goc, nut_dich, cutoff=30))
                         except StopIteration:
-                            st.warning("⚠️ DFS không tìm thấy đường trong giới hạn độ sâu. Hệ thống tự chuyển sang BFS.")
+                            st.warning(
+                                "⚠️ DFS không tìm thấy đường trong giới hạn độ sâu. Hệ thống tự chuyển sang BFS.")
                             duong_di = nx.shortest_path(Do_thi_Pleiku, nut_goc, nut_dich, weight=None)
                 except nx.NetworkXNoPath:
-                    st.error(f"⛔ Không có đường đi từ '{start_query}' đến '{end_query}' (Có thể do đường 1 chiều hoặc khu vực bị cô lập).")
+                    st.error(
+                        f"⛔ Không có đường đi từ '{start_query}' đến '{end_query}' (Có thể do đường 1 chiều hoặc khu vực bị cô lập).")
                     st.session_state['lo_trinh_tim_duoc'] = []
                     st.stop()
                 except Exception as e:
-                     st.error(f"Lỗi thuật toán: {e}")
-                     st.stop()
+                    st.error(f"Lỗi thuật toán: {e}")
+                    st.stop()
 
                 # 4. LƯU SESSION
                 st.session_state['lo_trinh_tim_duoc'] = duong_di
                 st.session_state['chi_tiet_lo_trinh'] = lay_thong_tin_lo_trinh(Do_thi_Pleiku, duong_di)
-                st.session_state['tam_ban_do'] = [(start_point[0] + end_point[0]) / 2, (start_point[1] + end_point[1]) / 2]
+                st.session_state['tam_ban_do'] = [(start_point[0] + end_point[0]) / 2,
+                                                  (start_point[1] + end_point[1]) / 2]
                 st.session_state['ten_diem_dau'] = start_query
                 st.session_state['ten_diem_cuoi'] = end_query
-                
+
                 # Tính toán giới hạn bản đồ để zoom vừa vặn (Fit Bounds)
                 if duong_di:
                     nodes_data = [Do_thi_Pleiku.nodes[n] for n in duong_di]
                     lats = [d['y'] for d in nodes_data]
                     lons = [d['x'] for d in nodes_data]
-                    # Sw [lat, lon], Ne [lat, lon]
                     st.session_state['bounds_ban_do'] = [[min(lats), min(lons)], [max(lats), max(lons)]]
 
             except Exception as e:
@@ -519,7 +539,7 @@ with tab_ban_do:
             st.markdown("### 📋 Lộ trình chi tiết")
             with st.container():
                 html_content = '<div class="khung-lo-trinh">'
-                
+
                 html_content += f'''
                 <div class="dong-thoi-gian">
                     <div class="icon-moc" style="background:#D5F5E3; border-color:#2ECC71; color:#27AE60;">A</div>
@@ -544,20 +564,21 @@ with tab_ban_do:
                 st.markdown(html_content, unsafe_allow_html=True)
 
         with cot_ban_do:
+            # LƯU Ý: Do bạn đã xóa hàm tao_ban_do_nen nên tôi dùng Map cơ bản
             m = folium.Map(location=st.session_state['tam_ban_do'], zoom_start=14, tiles="OpenStreetMap")
             Fullscreen().add_to(m)
 
             start_node_data = Do_thi_Pleiku.nodes[duong_di[0]]
             end_node_data = Do_thi_Pleiku.nodes[duong_di[-1]]
-            
+
             coord_start = (start_node_data['y'], start_node_data['x'])
             coord_end = (end_node_data['y'], end_node_data['x'])
 
             folium.Marker(coord_start, icon=folium.Icon(color="green", icon="play", prefix='fa'),
-                            popup=f"BẮT ĐẦU: {st.session_state['ten_diem_dau']}").add_to(m)
-            
+                          popup=f"BẮT ĐẦU: {st.session_state['ten_diem_dau']}").add_to(m)
+
             folium.Marker(coord_end, icon=folium.Icon(color="red", icon="flag", prefix='fa'),
-                            popup=f"KẾT THÚC: {st.session_state['ten_diem_cuoi']}").add_to(m)
+                          popup=f"KẾT THÚC: {st.session_state['ten_diem_cuoi']}").add_to(m)
 
             toa_do_duong_di = []
             toa_do_duong_di.append(coord_start)
@@ -574,10 +595,11 @@ with tab_ban_do:
 
             mau_sac = "orange" if "DFS" in thuat_toan_tim_duong else (
                 "purple" if "BFS" in thuat_toan_tim_duong else "#3498DB")
-            
+
             AntPath(toa_do_duong_di, color=mau_sac, weight=5, opacity=0.8, delay=1000).add_to(m)
-            
-            if coord_start: folium.PolyLine([coord_start, toa_do_duong_di[0]], color="gray", weight=2, dash_array='5, 5').add_to(m)
+
+            if coord_start: folium.PolyLine([coord_start, toa_do_duong_di[0]], color="gray", weight=2,
+                                            dash_array='5, 5').add_to(m)
 
             # --- TÍNH NĂNG MỚI: AUTO ZOOM VỪA VẶN LỘ TRÌNH ---
             if 'bounds_ban_do' in st.session_state and st.session_state['bounds_ban_do']:
