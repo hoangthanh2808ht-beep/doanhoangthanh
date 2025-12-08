@@ -392,7 +392,7 @@ with tab_ban_do:
 
     # DANH SÁCH ~100 ĐỊA ĐIỂM
     ds_dia_diem = {
-        "--- HÀNH CHÍNH ---": (0, 0), "Quảng trường Đại Đoàn Kết": (13.98355, 108.0057), "UBND Tỉnh Gia Lai": (13.9939, 108.0016),
+        "--- HÀNH CHÍNH ---": (0, 0), "Quảng trường Đại Đoàn Kết": (11.98355, 108.0057), "UBND Tỉnh Gia Lai": (13.9939, 108.0016),
         "Bưu điện Tỉnh": (13.9772, 108.0041), "Công an Tỉnh Gia Lai": (13.9778, 108.0025), "Bảo tàng Tỉnh Gia Lai": (13.9781, 108.0056),
         "Sở Giáo dục & Đào tạo": (13.9776, 108.0048), "Tỉnh ủy Gia Lai": (13.9805, 108.0045), "Sở Y Tế Gia Lai": (13.9765, 108.0035),
         "Nhà Thi đấu Tỉnh": (13.9809, 108.0043), "Điện lực Gia Lai": (13.9755, 108.0040), "Trung tâm Văn hóa Thanh Thiếu Nhi": (13.9760, 108.0060),
@@ -538,4 +538,5 @@ with tab_ban_do:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="cartodbpositron")
         them_cac_nut_len_ban_do(m, Do_thi_Pleiku)
         st_folium(m, width=1200, height=600, returned_objects=[])
+
 
