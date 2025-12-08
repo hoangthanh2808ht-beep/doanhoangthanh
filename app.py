@@ -274,32 +274,42 @@ with tab_ly_thuyet:
             dang_xem = st.selectbox("Chọn cách xem:", ["Ma trận kề", "Danh sách kề", "Danh sách cạnh"])
             
             if dang_xem == "Ma trận kề":
+                # 1. Ma trận kề 
                 df = pd.DataFrame(nx.adjacency_matrix(st.session_state['do_thi']).todense(),
                                   index=st.session_state['do_thi'].nodes(), 
                                   columns=st.session_state['do_thi'].nodes())
                 st.dataframe(df, height=200, use_container_width=True)
             
             elif dang_xem == "Danh sách kề":
-                st.caption("Cấu trúc: {Đỉnh nguồn: {Đỉnh đích: {Thuộc tính}}}")
-                st.json(nx.to_dict_of_dicts(st.session_state['do_thi']), expanded=False)
+                # 2. Danh sách kề
+                adj_raw = nx.to_dict_of_dicts(st.session_state['do_thi'])
+                table_data = []
+                for node, neighbors in adj_raw.items():
+                    # Format: "B (w=4), C (w=2)"
+                    neighbors_str = ", ".join([f"{n} (w={w.get('weight', 1)})" for n, w in neighbors.items()])
+                    table_data.append({"Đỉnh nguồn": node, "Các đỉnh kề & Trọng số": neighbors_str})
+                
+                if table_data:
+                    st.dataframe(pd.DataFrame(table_data), height=200, use_container_width=True, hide_index=True)
+                else:
+                    st.warning("Đồ thị trống.")
             
-            else: # Danh sách cạnh (Dạng BẢNG)
+            else: 
+                # 3. Danh sách cạnh
                 data_canh = []
                 for u, v, data in st.session_state['do_thi'].edges(data=True):
                     data_canh.append({
-                        "Đỉnh đầu (u)": u,
-                        "Đỉnh cuối (v)": v,
-                        "Trọng số (w)": data.get('weight', 1)
+                        "Đỉnh đầu": u,
+                        "Đỉnh cuối": v,
+                        "Trọng số": data.get('weight', 1)
                     })
                 
-                # Hiển thị bảng
                 if data_canh:
-                    df_canh = pd.DataFrame(data_canh)
-                    st.dataframe(df_canh, height=200, use_container_width=True, hide_index=True)
+                    st.dataframe(pd.DataFrame(data_canh), height=200, use_container_width=True, hide_index=True)
                 else:
                     st.warning("Đồ thị chưa có cạnh nào.")
 
-            # Nút kiểm tra 2 phía
+            # Nút kiểm tra
             if st.button("Kiểm tra 2 phía (Bipartite)"):
                 kq = nx.is_bipartite(st.session_state['do_thi'])
                 st.write(f"Kết quả: {'✅ Có' if kq else '❌ Không'}")
@@ -613,6 +623,7 @@ with tab_ban_do:
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap") # Giao diện OpenStreetMap
         st_folium(m, width=1200, height=600, returned_objects=[])
+
 
 
 
