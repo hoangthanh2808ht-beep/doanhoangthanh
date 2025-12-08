@@ -271,6 +271,7 @@ with tab_ly_thuyet:
        # Cột 1: Biểu diễn 
         with c1:
             st.info("1. Biểu diễn dữ liệu ")
+            # Thêm "Danh sách cạnh" vào menu lựa chọn
             dang_xem = st.selectbox("Chọn cách xem:", ["Ma trận kề", "Danh sách kề", "Danh sách cạnh"])
             
             if dang_xem == "Ma trận kề":
@@ -281,10 +282,12 @@ with tab_ly_thuyet:
                 st.dataframe(df, height=200, use_container_width=True)
             
             elif dang_xem == "Danh sách kề":
+                # SỬA: Dùng to_dict_of_dicts để hiển thị cả trọng số (weight)
                 st.caption("Cấu trúc: {Đỉnh nguồn: {Đỉnh đích: {Thuộc tính}}}")
                 st.json(nx.to_dict_of_dicts(st.session_state['do_thi']), expanded=False)
             
             else: # Danh sách cạnh
+                # SỬA: Chuyển danh sách cạnh thành Bảng (DataFrame) cho đẹp
                 data_canh = []
                 for u, v, data in st.session_state['do_thi'].edges(data=True):
                     data_canh.append({
@@ -299,7 +302,7 @@ with tab_ly_thuyet:
                 else:
                     st.warning("Đồ thị chưa có cạnh nào.")
 
-            # Nút kiểm tra 2 phía 
+            # Nút kiểm tra 2 phía (Giữ nguyên)
             if st.button("Kiểm tra 2 phía (Bipartite)"):
                 kq = nx.is_bipartite(st.session_state['do_thi'])
                 st.write(f"Kết quả: {'✅ Có' if kq else '❌ Không'}")
@@ -613,4 +616,5 @@ with tab_ban_do:
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap") # Giao diện OpenStreetMap
         st_folium(m, width=1200, height=600, returned_objects=[])
+
 
