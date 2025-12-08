@@ -406,12 +406,12 @@ with tab_ly_thuyet:
                         st.error(f"Lỗi: {e}")
 
 # =============================================================================
-# TAB 2: BẢN ĐỒ PLEIKU (GIAO DIỆN ĐẸP HƠN)
+# TAB 2: BẢN ĐỒ PLEIKU (ĐÃ SỬA LỖI HIỂN THỊ TÊN ĐƯỜNG TRÊN VỆ TINH)
 # =============================================================================
 with tab_ban_do:
     @st.cache_resource
     def tai_ban_do_pleiku():
-        # Tải bản đồ rộng 5km để bao quát hơn
+        # Tải bản đồ rộng 5km (hoặc 10000 nếu bạn đã sửa)
         return ox.graph_from_point((13.9800, 108.0000), dist=5000, network_type='drive')
 
     with st.spinner("Đang tải dữ liệu bản đồ TP. Pleiku..."):
@@ -429,15 +429,42 @@ with tab_ban_do:
         start_query = c1.text_input("📍 Điểm xuất phát:", value="Quảng trường Đại Đoàn Kết")
         end_query = c2.text_input("🏁 Điểm đến:", value="Sân bay Pleiku")
         
+        # Menu chọn giao diện
         style_map = c3.selectbox("🎨 Giao diện bản đồ:", 
                                  ["Mặc định (OSM)", "Chế độ Tối (Dark)", "Chế độ Sáng (Light)", "Vệ tinh (Satellite)"])
         
-        # Thêm chọn thuật toán xuống dưới một chút hoặc để cột thứ 4 nếu muốn
         thuat_toan_tim_duong = st.selectbox("Thuật toán:", ["Dijkstra", "BFS", "DFS"])
-        
         nut_tim_duong = st.form_submit_button("🚀 TÌM ĐƯỜNG NGAY", type="primary", use_container_width=True)
 
-    # --- XỬ LÝ LOGIC TÌM ĐƯỜNG
+    # --- HÀM HỖ TRỢ TẠO BẢN ĐỒ VỚI TÙY CHỌN STYLE ---
+    def tao_ban_do_nen(location, zoom_start, style):
+        if style == "Chế độ Tối (Dark)":
+            m = folium.Map(location=location, zoom_start=zoom_start, tiles='CartoDB dark_matter')
+            line_color = "#00FFFF" # Cyan
+        elif style == "Chế độ Sáng (Light)":
+            m = folium.Map(location=location, zoom_start=zoom_start, tiles='CartoDB positron')
+            line_color = "#E74C3C" # Đỏ
+        elif style == "Vệ tinh (Satellite)":
+            m = folium.Map(location=location, zoom_start=zoom_start, tiles=None)
+            # 1. Lớp nền vệ tinh
+            folium.TileLayer(
+                tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                attr='Esri', name='Esri Satellite', overlay=False, control=True
+            ).add_to(m)
+            # 2. Lớp tên đường/địa điểm (QUAN TRỌNG: Đã thêm vào đây)
+            folium.TileLayer(
+                tiles='https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+                attr='Esri Labels', name='Esri Labels', overlay=True, control=True
+            ).add_to(m)
+            line_color = "#FFFF00" # Vàng
+        else: # Mặc định OSM
+            m = folium.Map(location=location, zoom_start=zoom_start, tiles="OpenStreetMap")
+            line_color = "#3498DB" # Xanh dương
+        
+        Fullscreen().add_to(m)
+        return m, line_color
+
+    # --- XỬ LÝ LOGIC TÌM ĐƯỜNG ---
     if nut_tim_duong:
         with st.spinner(f"Đang tìm đường từ '{start_query}' đến '{end_query}'..."):
             try:
@@ -465,6 +492,7 @@ with tab_ban_do:
                         try:
                             duong_di = next(nx.all_simple_paths(Do_thi_Pleiku, nut_goc, nut_dich, cutoff=50))
                         except:
+                            st.warning("DFS không tìm thấy, chuyển sang BFS.")
                             duong_di = nx.shortest_path(Do_thi_Pleiku, nut_goc, nut_dich, weight=None)
                 except nx.NetworkXNoPath:
                     st.error("⛔ Không có đường đi."); st.stop()
@@ -482,7 +510,6 @@ with tab_ban_do:
                     lats = [d['y'] for d in nodes_data]; lons = [d['x'] for d in nodes_data]
                     st.session_state['bounds_ban_do'] = [[min(lats), min(lons)], [max(lats), max(lons)]]
                 
-                # Lưu style bản đồ vào session để không bị reset khi render lại
                 st.session_state['style_map_choice'] = style_map
 
             except Exception as e:
@@ -494,7 +521,6 @@ with tab_ban_do:
         chi_tiet = st.session_state['chi_tiet_lo_trinh']
         tong_km = sum(d['do_dai'] for d in chi_tiet) / 1000
 
-        # Thống kê
         st.markdown(f"""
         <div class="hop-thong-ke">
             <div class="muc-thong-ke"><div class="gia-tri-thong-ke">{tong_km:.2f} km</div><div class="nhan-thong-ke">Quãng đường</div></div>
@@ -504,7 +530,6 @@ with tab_ban_do:
 
         cot_ban_do, cot_chi_tiet = st.columns([2, 1.2])
 
-        # Cột chi tiế
         with cot_chi_tiet:
             st.markdown("### 📋 Chi tiết")
             html_content = '<div class="khung-lo-trinh">'
@@ -514,41 +539,13 @@ with tab_ban_do:
             html_content += f'<div class="dong-thoi-gian"><div class="icon-moc" style="background:#FADBD8; color:#C0392B;">B</div><div class="noi-dung-moc"><b>{st.session_state["ten_diem_cuoi"]}</b></div></div></div>'
             st.markdown(html_content, unsafe_allow_html=True)
 
-        # Cột Bản đồ
         with cot_ban_do:
-            # Lấy style đã chọn (hoặc mặc định nếu chưa chọn)
             current_style = st.session_state.get('style_map_choice', "Mặc định (OSM)")
             
-            if current_style == "Chế độ Tối (Dark)":
-                m = folium.Map(location=st.session_state['tam_ban_do'], zoom_start=14, tiles='CartoDB dark_matter')
-                line_color = "#00FFFF" # Màu Cyan sáng rực trên nền đen
-            elif current_style == "Chế độ Sáng (Light)":
-                m = folium.Map(location=st.session_state['tam_ban_do'], zoom_start=14, tiles='CartoDB positron')
-                line_color = "#E74C3C" # Màu đỏ đậm trên nền trắng
-            elif current_style == "Vệ tinh (Satellite)":
-                # Vệ tinh cần cấu hình riêng
-                m = folium.Map(location=st.session_state['tam_ban_do'], zoom_start=14, tiles=None)
-                folium.TileLayer(
-                    tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-                    attr='Esri',
-                    name='Esri Satellite',
-                    overlay=False,
-                    control=True
-                ).add_to(m)
-                folium.TileLayer(
-                    tiles='https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-                    attr='Esri Labels',
-                    name='Esri Labels',
-                    overlay=True,
-                    control=True
-                ).add_to(m)
-                line_color = "#FFFF00" # Màu vàng rực trên nền vệ tinh xanh lá
-            else: # Mặc định
-                m = folium.Map(location=st.session_state['tam_ban_do'], zoom_start=14, tiles="OpenStreetMap")
-                line_color = "#3498DB" # Màu xanh dương mặc định
+            # --- SỬ DỤNG HÀM TẠO BẢN ĐỒ ĐỂ ĐẢM BẢO CÓ NHÃN ---
+            m, line_color = tao_ban_do_nen(st.session_state['tam_ban_do'], 14, current_style)
 
-            Fullscreen().add_to(m)
-
+            # Vẽ Marker và Đường đi
             start_node_data = Do_thi_Pleiku.nodes[duong_di[0]]
             end_node_data = Do_thi_Pleiku.nodes[duong_di[-1]]
             coord_start = (start_node_data['y'], start_node_data['x'])
@@ -557,7 +554,6 @@ with tab_ban_do:
             folium.Marker(coord_start, icon=folium.Icon(color="green", icon="play", prefix='fa'), popup=st.session_state['ten_diem_dau']).add_to(m)
             folium.Marker(coord_end, icon=folium.Icon(color="red", icon="flag", prefix='fa'), popup=st.session_state['ten_diem_cuoi']).add_to(m)
 
-            # Vẽ đường AntPath với màu sắc tùy biến theo giao diện
             toa_do_duong_di = [coord_start]
             for u, v in zip(duong_di[:-1], duong_di[1:]):
                 canh = lay_du_lieu_canh_an_toan(Do_thi_Pleiku, u, v)
@@ -577,15 +573,7 @@ with tab_ban_do:
             st_folium(m, width=900, height=600, returned_objects=[])
 
     else:
+        # Bản đồ mặc định khi chưa tìm đường (ĐÃ FIX LỖI MẤT CHỮ Ở ĐÂY)
         current_style = st.session_state.get('style_map_choice', "Mặc định (OSM)")
-        if current_style == "Chế độ Tối (Dark)":
-             m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles='CartoDB dark_matter')
-        elif current_style == "Chế độ Sáng (Light)":
-             m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles='CartoDB positron')
-        elif current_style == "Vệ tinh (Satellite)":
-             m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles=None)
-             folium.TileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr='Esri').add_to(m)
-        else:
-             m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
-        
+        m, _ = tao_ban_do_nen([13.9785, 108.0051], 14, current_style)
         st_folium(m, width=1200, height=600, returned_objects=[])
