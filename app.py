@@ -579,5 +579,8 @@ with tab_ban_do:
             st_folium(m, width=900, height=600, returned_objects=[])
 
     else:
+        # Default map when no route
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
         st_folium(m, width=1200, height=600, returned_objects=[])
+
+# END OF FILE
