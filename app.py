@@ -456,12 +456,27 @@ with tab_ban_do:
                 # 3. CHẠY THUẬT TOÁN
                 duong_di = []
                 try:
+                    # 1. TRƯỜNG HỢP DIJKSTRA: Tối ưu theo độ dài thực tế (km)
                     if "Dijkstra" in thuat_toan_tim_duong:
-                        # Phương pháp ngắn nhất theo chiều dài (Tốn ít km nhất)
                         duong_di = nx.shortest_path(Do_thi_Pleiku, nut_goc, nut_dich, weight='length')
-                    elif "BFS" in thuat_toan_tim_duong or "DFS" in thuat_toan_tim_duong:
+                        st.success(f"✅ Đang chạy Dijkstra: Tìm đường ngắn nhất theo quãng đường (km).")
+
+                    # 2. TRƯỜNG HỢP BFS: Tối ưu theo số lượng nút (đi qua ít ngã rẽ nhất)
+                    elif "BFS" in thuat_toan_tim_duong:
+                        # Trong NetworkX, shortest_path với weight=None chính là thuật toán BFS
                         duong_di = nx.shortest_path(Do_thi_Pleiku, nut_goc, nut_dich, weight=None)
-                        st.warning("✅ DFS/BFS đã được tối ưu: Đang sử dụng phương pháp tìm đường đi nhanh (BFS Logic).")
+                        st.info(f"✅ Đang chạy BFS (Breadth-First Search): Tìm đường đi qua ít địa điểm trung gian nhất (bất kể xa gần).")
+
+                    # 3. TRƯỜNG HỢP DFS: Đi theo chiều sâu (Không đảm bảo ngắn nhất)
+                    elif "DFS" in thuat_toan_tim_duong:
+                        
+                        cay_dfs = nx.dfs_tree(Do_thi_Pleiku, source=nut_goc)
+                        
+                        if nut_dich in cay_dfs:
+                            duong_di = nx.shortest_path(cay_dfs, nut_goc, nut_dich)
+                            st.warning(f"⚠️ Đang chạy DFS (Depth-First Search): Đường đi có thể rất dài và ngoằn ngoèo (đây là đặc trưng của thuật toán này).")
+                        else:
+                            raise nx.NetworkXNoPath # Không tìm thấy đích trong cây DFS
 
                 except nx.NetworkXNoPath:
                     st.error(f"⛔ Không có đường đi từ '{start_query}' đến '{end_query}' (Có thể do đường 1 chiều hoặc khu vực bị cô lập).")
@@ -470,7 +485,6 @@ with tab_ban_do:
                 except Exception as e:
                     st.error(f"Lỗi thuật toán: {e}")
                     st.stop()
-
                 # 4. LƯU SESSION
                 st.session_state['lo_trinh_tim_duoc'] = duong_di
                 st.session_state['chi_tiet_lo_trinh'] = lay_thong_tin_lo_trinh(Do_thi_Pleiku, duong_di)
@@ -581,4 +595,5 @@ with tab_ban_do:
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
         st_folium(m, width=1200, height=600, returned_objects=[])
+
 
