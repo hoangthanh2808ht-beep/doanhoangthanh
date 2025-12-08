@@ -12,7 +12,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # -----------------------------------------------------------------------------
-# 1. CẤU HÌNH GIAO DIỆN & TRANG TRÍ (CSS)
+# 1. CẤU HÌNH GIAO DIỆN
 # -----------------------------------------------------------------------------
 st.set_page_config(page_title="Hệ thống Dẫn đường Pleiku", layout="wide", page_icon="🗺️")
 
@@ -87,7 +87,7 @@ if 'tam_ban_do' not in st.session_state: st.session_state['tam_ban_do'] = [13.97
 
 
 # -----------------------------------------------------------------------------
-# HÀM XỬ LÝ 1: TRÍCH XUẤT THÔNG TIN LỘ TRÌNH (AN TOÀN HƠN)
+# HÀM XỬ LÝ 1: TRÍCH XUẤT THÔNG TIN LỘ TRÌNH 
 # -----------------------------------------------------------------------------
 def lay_du_lieu_canh_an_toan(G, u, v, khoa_trong_so='length'):
     """Lấy dữ liệu cạnh an toàn cho cả Graph thường và MultiGraph"""
@@ -201,24 +201,6 @@ def thuat_toan_fleury(G_input):
             u = next_v
 
     return edges_path, "Thành công"
-
-
-# -----------------------------------------------------------------------------
-# HÀM HỖ TRỢTRỢ
-# -----------------------------------------------------------------------------
-def them_cac_nut_len_ban_do(ban_do, do_thi):
-    # Vẽ các chấm tròn màu xám (Nodes)
-    for node, data in do_thi.nodes(data=True):
-        folium.CircleMarker(
-            location=[data['y'], data['x']],
-            radius=1.5,  # Kích thước chấm nhỏ
-            color="gray",  # Viền xám
-            fill=True,
-            fill_color="#555",  # Màu bên trong xám đậm
-            fill_opacity=0.6,
-            weight=0.5,
-            popup=f"Node ID: {node}"
-        ).add_to(ban_do)
 
 
 # -----------------------------------------------------------------------------
@@ -423,13 +405,13 @@ with tab_ban_do:
 
     # DANH SÁCH ~100 ĐỊA ĐIỂM
     ds_dia_diem = {
-        "--- HÀNH CHÍNH ---": (0, 0), "Sân vận động Pleiku": (13.9788, 108.0042),
+        "--- HÀNH CHÍNH ---": (0, 0), "Quảng trường Đại Đoàn Kết": (13.9788, 108.0042),
         "UBND Tỉnh Gia Lai": (13.9792, 108.0039),
         "Bưu điện Tỉnh": (13.9772, 108.0041), "Công an Tỉnh Gia Lai": (13.9778, 108.0025),
         "Bảo tàng Tỉnh Gia Lai": (13.9781, 108.0056),
         "Sở Giáo dục & Đào tạo": (13.9776, 108.0048), "Tỉnh ủy Gia Lai": (13.9805, 108.0045),
         "Sở Y Tế Gia Lai": (13.9765, 108.0035),
-        "Quảng trường đại đoàn kết": (13.9812, 108.0065), "Điện lực Gia Lai": (13.9755, 108.0040),
+        "Nhà Thi đấu Tỉnh": (13.9812, 108.0065), "Điện lực Gia Lai": (13.9755, 108.0040),
         "Trung tâm Văn hóa Thanh Thiếu Nhi": (13.9760, 108.0060),
         "--- GIAO THÔNG ---": (0, 0), "Sân bay Pleiku": (14.0050, 108.0180), "Bến xe Đức Long": (13.9556, 108.0264),
         "Ngã 3 Hoa Lư": (13.9855, 108.0052),
@@ -500,7 +482,7 @@ with tab_ban_do:
                 try:
                     duong_di = next(nx.all_simple_paths(Do_thi_Pleiku, nut_goc, nut_dich, cutoff=30))
                 except StopIteration:
-                    st.warning("DFS không tìm thấy đường trong giới hạn. Đã chuyển sang BFS.")
+                    st.warning("DFS không tìm thấy đường trong giới hạn độ sâu (cutoff=30). Đã chuyển sang BFS.")
                     duong_di = nx.shortest_path(Do_thi_Pleiku, nut_goc, nut_dich, weight=None)
                 except Exception:
                     duong_di = []
@@ -557,7 +539,7 @@ with tab_ban_do:
                 st.markdown(html_content, unsafe_allow_html=True)
 
         with cot_ban_do:
-            m = folium.Map(location=st.session_state['tam_ban_do'], zoom_start=14, tiles="OpenStreetMap")
+            m = folium.Map(location=st.session_state['tam_ban_do'], zoom_start=14, tiles="OpenStreetMap") # <--- ĐÃ SỬA DÒNG NÀY
             Fullscreen().add_to(m)
 
             # Marker A/B
@@ -584,31 +566,14 @@ with tab_ban_do:
                     nut_v = Do_thi_Pleiku.nodes[v]
                     toa_do_duong_di.append((nut_v['y'], nut_v['x']))
 
-            # --- VẼ NÚT TRÊN ĐƯỜNG ĐI ---
-            # Chỉ vẽ node thuộc đường đi để không lag
-            for nut in duong_di:
-                data = Do_thi_Pleiku.nodes[nut]
-                folium.CircleMarker(
-                    location=[data['y'], data['x']],
-                    radius=2,
-                    color="#555",
-                    fill=True,
-                    fill_color="white",
-                    fill_opacity=1,
-                    weight=1,
-                    popup=f"Node: {nut}"
-                ).add_to(m)
-
             mau_sac = "orange" if "DFS" in thuat_toan_tim_duong else (
                 "purple" if "BFS" in thuat_toan_tim_duong else "#3498DB")
-            # Hiệu ứng mờ mờ (AntPath)
-            AntPath(toa_do_duong_di, color=mau_sac, weight=5, opacity=0.8, delay=1000).add_to(m)
+            AntPath(toa_do_duong_di, color=mau_sac, weight=6, opacity=0.8, delay=1000).add_to(m)
 
-            # Nét đứt nối vào
-            if coord_start != (0, 0):
-                folium.PolyLine([coord_start, toa_do_duong_di[0]], color="gray", weight=2, dash_array='5, 5').add_to(m)
-            if coord_end != (0, 0):
-                folium.PolyLine([coord_end, toa_do_duong_di[-1]], color="gray", weight=2, dash_array='5, 5').add_to(m)
+            folium.PolyLine([dia_diem_hop_le[diem_bat_dau], toa_do_duong_di[0]], color="gray", weight=2,
+                            dash_array='5, 5').add_to(m)
+            folium.PolyLine([dia_diem_hop_le[diem_ket_thuc], toa_do_duong_di[-1]], color="gray", weight=2,
+                            dash_array='5, 5').add_to(m)
 
             st_folium(m, width=900, height=600, returned_objects=[])
 
@@ -616,4 +581,3 @@ with tab_ban_do:
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
         st_folium(m, width=1200, height=600, returned_objects=[])
-
