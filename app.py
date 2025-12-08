@@ -48,7 +48,7 @@ st.markdown("""
     .dong-thoi-gian::before {
         content: ''; position: absolute; left: 19px; top: 35px; bottom: 0; width: 2px; background-color: #E0E0E0;
     }
-    .dong-thoi_gian:last-child::before { display: none; }
+    .dong-thoi-gian:last-child::before { display: none; }
 
     .icon-moc {
         flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%;
@@ -206,25 +206,6 @@ def thuat_toan_fleury(G_input):
             u = next_v
 
     return edges_path, "Thành công"
-
-# HÀM 4: Tạo nền bản đồ (Switch giao diện Tối/Sáng/Vệ tinh)
-def tao_ban_do_nen(location, zoom_start, style):
-    if style == "Chế độ Tối (Dark)":
-        m = folium.Map(location=location, zoom_start=zoom_start, tiles='CartoDB dark_matter')
-        line_color = "#00FFFF"
-    elif style == "Chế độ Sáng (Light)":
-        m = folium.Map(location=location, zoom_start=zoom_start, tiles='CartoDB positron')
-        line_color = "#E74C3C"
-    elif style == "Vệ tinh (Satellite)":
-        m = folium.Map(location=location, zoom_start=zoom_start, tiles=None)
-        folium.TileLayer(tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr='Esri', name='Esri Satellite', overlay=False, control=True).add_to(m)
-        folium.TileLayer(tiles='https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', attr='Esri Labels', name='Esri Labels', overlay=True, control=True).add_to(m)
-        line_color = "#FFFF00"
-    else:
-        m = folium.Map(location=location, zoom_start=zoom_start, tiles="OpenStreetMap")
-        line_color = "#3498DB"
-    Fullscreen().add_to(m)
-    return m, line_color
 
 
 # -----------------------------------------------------------------------------
@@ -432,8 +413,8 @@ with tab_ly_thuyet:
 with tab_ban_do:
     @st.cache_resource
     def tai_ban_do_pleiku():
-        # LỖI #1: Đã sửa DIST từ 3000 -> 5000 để tăng sự ổn định và bao phủ bản đồ
-        return ox.graph_from_point((13.9800, 108.0000), dist=5000, network_type='drive')
+        # Bán kính 3km (Tối ưu tốc độ)
+        return ox.graph_from_point((13.9800, 108.0000), dist=3000, network_type='drive')
 
 
     with st.spinner("Đang tải dữ liệu bản đồ TP. Pleiku (Khoảng 45 giây)..."):
@@ -463,10 +444,12 @@ with tab_ban_do:
         with st.spinner(f"Đang tìm vị trí '{start_query}' và '{end_query}' trên bản đồ..."):
             try:
                 # 1. TÌM TỌA ĐỘ TỪ TÊN (GEOCODING)
+                # Thêm hậu tố Gia Lai, Vietnam để tìm chính xác hơn
                 try:
                     q_start = start_query if "Gia Lai" in start_query else f"{start_query}, Gia Lai, Vietnam"
                     q_end = end_query if "Gia Lai" in end_query else f"{end_query}, Gia Lai, Vietnam"
 
+                    # ox.geocode trả về (lat, lon)
                     start_point = ox.geocode(q_start)
                     end_point = ox.geocode(q_end)
                 except Exception:
@@ -474,6 +457,7 @@ with tab_ban_do:
                     st.stop()
 
                 # 2. TÌM NODE TRÊN ĐỒ THỊ GẦN NHẤT
+                # Lưu ý: nearest_nodes nhận (G, X=Lon, Y=Lat)
                 nut_goc = ox.distance.nearest_nodes(Do_thi_Pleiku, start_point[1], start_point[0])
                 nut_dich = ox.distance.nearest_nodes(Do_thi_Pleiku, end_point[1], end_point[0])
 
@@ -486,8 +470,8 @@ with tab_ban_do:
                         duong_di = nx.shortest_path(Do_thi_Pleiku, nut_goc, nut_dich, weight=None)
                     elif "DFS" in thuat_toan_tim_duong:
                         try:
-                            # LỖI #2: Đã sửa cutoff từ 50 -> 30 để DFS thất bại nhanh hơn (tránh treo máy)
-                            duong_di = next(nx.all_simple_paths(Do_thi_Pleiku, nut_goc, nut_dich, cutoff=30))
+                            # DFS trong bản đồ thực tế rất nguy hiểm, cần giới hạn độ sâu
+                            duong_di = next(nx.all_simple_paths(Do_thi_Pleiku, nut_goc, nut_dich, cutoff=50))
                         except StopIteration:
                             st.warning(
                                 "⚠️ DFS không tìm thấy đường trong giới hạn độ sâu. Hệ thống tự chuyển sang BFS.")
@@ -514,6 +498,7 @@ with tab_ban_do:
                     nodes_data = [Do_thi_Pleiku.nodes[n] for n in duong_di]
                     lats = [d['y'] for d in nodes_data]
                     lons = [d['x'] for d in nodes_data]
+                    # Sw [lat, lon], Ne [lat, lon]
                     st.session_state['bounds_ban_do'] = [[min(lats), min(lons)], [max(lats), max(lons)]]
 
             except Exception as e:
@@ -564,7 +549,6 @@ with tab_ban_do:
                 st.markdown(html_content, unsafe_allow_html=True)
 
         with cot_ban_do:
-            # LƯU Ý: Do bạn đã xóa hàm tao_ban_do_nen nên tôi dùng Map cơ bản
             m = folium.Map(location=st.session_state['tam_ban_do'], zoom_start=14, tiles="OpenStreetMap")
             Fullscreen().add_to(m)
 
@@ -611,3 +595,4 @@ with tab_ban_do:
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
         st_folium(m, width=1200, height=600, returned_objects=[])
+
