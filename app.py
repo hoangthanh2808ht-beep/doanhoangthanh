@@ -8,11 +8,10 @@ from folium.plugins import AntPath, Fullscreen
 from streamlit_folium import st_folium
 import warnings
 
-# Tắt các cảnh báo hệ thống để màn hình sạch đẹp
 warnings.filterwarnings("ignore")
 
 # -----------------------------------------------------------------------------
-# 1. CẤU HÌNH GIAO DIỆN & TRANG TRÍ (CSS)
+# 1. CẤU HÌNH GIAO DIỆN 
 # -----------------------------------------------------------------------------
 st.set_page_config(page_title="Hệ thống Dẫn đường Pleiku", layout="wide", page_icon="🗺️")
 
@@ -86,11 +85,11 @@ if 'chi_tiet_lo_trinh' not in st.session_state: st.session_state['chi_tiet_lo_tr
 if 'tam_ban_do' not in st.session_state: st.session_state['tam_ban_do'] = [13.9785, 108.0051]
 if 'ten_diem_dau' not in st.session_state: st.session_state['ten_diem_dau'] = "Điểm A"
 if 'ten_diem_cuoi' not in st.session_state: st.session_state['ten_diem_cuoi'] = "Điểm B"
-if 'bounds_ban_do' not in st.session_state: st.session_state['bounds_ban_do'] = None # Thêm biến này để auto-zoom
+if 'bounds_ban_do' not in st.session_state: st.session_state['bounds_ban_do'] = None
 
 
 # -----------------------------------------------------------------------------
-# HÀM XỬ LÝ 1: TRÍCH XUẤT THÔNG TIN LỘ TRÌNH (AN TOÀN HƠN)
+# HÀM XỬ LÝ 1
 # -----------------------------------------------------------------------------
 def lay_du_lieu_canh_an_toan(G, u, v, khoa_trong_so='length'):
     """Lấy dữ liệu cạnh an toàn cho cả Graph thường và MultiGraph"""
@@ -407,7 +406,7 @@ with tab_ly_thuyet:
                         st.error(f"Lỗi: {e}")
 
 # =============================================================================
-# TAB 2: BẢN ĐỒ PLEIKU (CHẾ ĐỘ TÌM KIẾM THÔNG MINH)
+# TAB 2: BẢN ĐỒ PLEIKU 
 # =============================================================================
 with tab_ban_do:
     @st.cache_resource
@@ -423,10 +422,7 @@ with tab_ban_do:
             st.error("Lỗi tải bản đồ, vui lòng thử lại!")
             st.stop()
 
-    # --- KHÔNG DÙNG DANH SÁCH THỦ CÔNG NỮA ---
-    # Thay vào đó là Form nhập liệu tìm kiếm (Geocoding)
-
-    st.markdown("### 🔍 Nhập tên địa điểm (Ví dụ: Chợ Pleiku, Sân vận động,...)")
+    st.markdown("### 🔍 Nhập tên địa điểm muốn đi(Ví dụ: Quảng trường Đại Đoàn Kết, Sân vận động,...)")
     
     with st.form("form_tim_duong"):
         c1, c2, c3 = st.columns([1.5, 1.5, 1])
@@ -441,8 +437,6 @@ with tab_ban_do:
     if nut_tim_duong:
         with st.spinner(f"Đang tìm vị trí '{start_query}' và '{end_query}' trên bản đồ..."):
             try:
-                # 1. TÌM TỌA ĐỘ TỪ TÊN (GEOCODING)
-                # Thêm hậu tố Gia Lai, Vietnam để tìm chính xác hơn
                 try:
                     q_start = start_query if "Gia Lai" in start_query else f"{start_query}, Gia Lai, Vietnam"
                     q_end = end_query if "Gia Lai" in end_query else f"{end_query}, Gia Lai, Vietnam"
@@ -459,21 +453,27 @@ with tab_ban_do:
                 nut_goc = ox.distance.nearest_nodes(Do_thi_Pleiku, start_point[1], start_point[0])
                 nut_dich = ox.distance.nearest_nodes(Do_thi_Pleiku, end_point[1], end_point[0])
 
-                # 3. CHẠY THUẬT TOÁN
+                # 3. CHẠY THUẬT TOÁN 
                 duong_di = []
-                if "Dijkstra" in thuat_toan_tim_duong:
-                    duong_di = nx.shortest_path(Do_thi_Pleiku, nut_goc, nut_dich, weight='length')
-                elif "BFS" in thuat_toan_tim_duong:
-                    duong_di = nx.shortest_path(Do_thi_Pleiku, nut_goc, nut_dich, weight=None)
-                elif "DFS" in thuat_toan_tim_duong:
-                    try:
-                        # DFS trong bản đồ thực tế rất nguy hiểm, cần giới hạn độ sâu
-                        duong_di = next(nx.all_simple_paths(Do_thi_Pleiku, nut_goc, nut_dich, cutoff=30))
-                    except StopIteration:
-                        st.warning("DFS quá lâu/không tìm thấy. Đã chuyển sang BFS.")
+                try:
+                    if "Dijkstra" in thuat_toan_tim_duong:
+                        duong_di = nx.shortest_path(Do_thi_Pleiku, nut_goc, nut_dich, weight='length')
+                    elif "BFS" in thuat_toan_tim_duong:
                         duong_di = nx.shortest_path(Do_thi_Pleiku, nut_goc, nut_dich, weight=None)
-                    except Exception:
-                        duong_di = []
+                    elif "DFS" in thuat_toan_tim_duong:
+                        try:
+                            # DFS trong bản đồ thực tế rất nguy hiểm, cần giới hạn độ sâu
+                            duong_di = next(nx.all_simple_paths(Do_thi_Pleiku, nut_goc, nut_dich, cutoff=50))
+                        except StopIteration:
+                            st.warning("⚠️ DFS không tìm thấy đường trong giới hạn độ sâu. Hệ thống tự chuyển sang BFS.")
+                            duong_di = nx.shortest_path(Do_thi_Pleiku, nut_goc, nut_dich, weight=None)
+                except nx.NetworkXNoPath:
+                    st.error(f"⛔ Không có đường đi từ '{start_query}' đến '{end_query}' (Có thể do đường 1 chiều hoặc khu vực bị cô lập).")
+                    st.session_state['lo_trinh_tim_duoc'] = []
+                    st.stop()
+                except Exception as e:
+                     st.error(f"Lỗi thuật toán: {e}")
+                     st.stop()
 
                 # 4. LƯU SESSION
                 st.session_state['lo_trinh_tim_duoc'] = duong_di
@@ -482,7 +482,6 @@ with tab_ban_do:
                 st.session_state['ten_diem_dau'] = start_query
                 st.session_state['ten_diem_cuoi'] = end_query
                 
-                # Tính toán giới hạn bản đồ để zoom vừa vặn (Fit Bounds)
                 if duong_di:
                     nodes_data = [Do_thi_Pleiku.nodes[n] for n in duong_di]
                     lats = [d['y'] for d in nodes_data]
@@ -572,10 +571,8 @@ with tab_ban_do:
             
             AntPath(toa_do_duong_di, color=mau_sac, weight=5, opacity=0.8, delay=1000).add_to(m)
             
-            # Vẽ đường nét đứt nối từ điểm geocode vào node gần nhất (nếu xa)
             if coord_start: folium.PolyLine([coord_start, toa_do_duong_di[0]], color="gray", weight=2, dash_array='5, 5').add_to(m)
 
-            # --- TÍNH NĂNG MỚI: AUTO ZOOM VỪA VẶN LỘ TRÌNH ---
             if 'bounds_ban_do' in st.session_state and st.session_state['bounds_ban_do']:
                 m.fit_bounds(st.session_state['bounds_ban_do'])
 
