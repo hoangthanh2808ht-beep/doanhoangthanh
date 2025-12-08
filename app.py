@@ -404,12 +404,12 @@ with tab_ly_thuyet:
                         st.error(f"Lỗi: {e}")
 
 # =============================================================================
-# TAB 2: BẢN ĐỒ PLEIKU (ĐÃ SỬA LỖI TỰ CHẠY + SỬA TỌA ĐỘ)
+# TAB 2: BẢN ĐỒ PLEIKU
 # =============================================================================
 with tab_ban_do:
     @st.cache_resource
     def tai_ban_do_pleiku():
-        # Bán kính 3km để load nhanh
+        # Bán kính 3km (Tối ưu tốc độ)
         return ox.graph_from_point((13.9800, 108.0000), dist=3000, network_type='drive')
     
     with st.spinner("Đang tải dữ liệu bản đồ TP. Pleiku..."):
@@ -420,10 +420,10 @@ with tab_ban_do:
             st.error("Lỗi tải bản đồ, vui lòng thử lại!")
             st.stop()
 
-    # DANH SÁCH ~100 ĐỊA ĐIỂM (Đã chỉnh lại tọa độ Quảng trường)
+    # DANH SÁCH ĐỊA ĐIỂM (Đã chuẩn hóa tọa độ chính xác)
     ds_dia_diem = {
         "--- HÀNH CHÍNH ---": (0, 0), 
-        "Quảng trường Đại Đoàn Kết": (13.9788, 108.0042), # ĐÃ SỬA TỌA ĐỘ
+        "Quảng trường Đại Đoàn Kết": (13.9788, 108.0042), # Tọa độ chuẩn
         "UBND Tỉnh Gia Lai": (13.9792, 108.0039),
         "Bưu điện Tỉnh": (13.9772, 108.0041), "Công an Tỉnh Gia Lai": (13.9778, 108.0025), "Bảo tàng Tỉnh Gia Lai": (13.9781, 108.0056),
         "Sở Giáo dục & Đào tạo": (13.9776, 108.0048), "Tỉnh ủy Gia Lai": (13.9805, 108.0045), "Sở Y Tế Gia Lai": (13.9765, 108.0035),
@@ -454,17 +454,14 @@ with tab_ban_do:
 
     dia_diem_hop_le = {k: v for k, v in ds_dia_diem.items() if v != (0, 0)}
 
-    # === SỬ DỤNG FORM ĐỂ CHẶN VIỆC TỰ ĐỘNG CHẠY KHI CHỌN ===
+    # DÙNG FORM ĐỂ ỔN ĐỊNH
     with st.form("form_tim_duong"):
-        c_di, c_den, c_thuat_toan = st.columns([1.5, 1.5, 1])
-        diem_bat_dau = c_di.selectbox("📍 Điểm xuất phát:", list(dia_diem_hop_le.keys()), index=1)
-        diem_ket_thuc = c_den.selectbox("🏁 Điểm đến:", list(dia_diem_hop_le.keys()), index=8)
-        thuat_toan_tim_duong = c_thuat_toan.selectbox("Thuật toán:", ["Dijkstra", "BFS", "DFS"])
-        
-        # Nút submit của form (Chỉ chạy khi bấm nút này)
+        c1, c2, c3 = st.columns([1.5, 1.5, 1])
+        diem_bat_dau = c1.selectbox("📍 Điểm xuất phát:", list(dia_diem_hop_le.keys()), index=1)
+        diem_ket_thuc = c2.selectbox("🏁 Điểm đến:", list(dia_diem_hop_le.keys()), index=8)
+        thuat_toan_tim_duong = c3.selectbox("Thuật toán:", ["Dijkstra", "BFS", "DFS"])
         nut_tim_duong = st.form_submit_button("🚀 TÌM ĐƯỜNG NGAY", type="primary", use_container_width=True)
 
-    # --- LOGIC TÌM ĐƯỜNG (CHỈ CHẠY KHI BẤM NÚT) ---
     if nut_tim_duong:
         try:
             u_coord, v_coord = dia_diem_hop_le[diem_bat_dau], dia_diem_hop_le[diem_ket_thuc]
@@ -485,16 +482,15 @@ with tab_ban_do:
                 except Exception:
                     duong_di = []
 
-            # Lưu kết quả vào session
+            # Lưu vào session
             st.session_state['lo_trinh_tim_duoc'] = duong_di
             st.session_state['chi_tiet_lo_trinh'] = lay_thong_tin_lo_trinh(Do_thi_Pleiku, duong_di)
             st.session_state['tam_ban_do'] = [(u_coord[0] + v_coord[0]) / 2, (u_coord[1] + v_coord[1]) / 2]
             
         except Exception as e:
             st.error(f"Không tìm thấy đường đi: {e}")
-            st.session_state['lo_trinh_tim_duoc'] = [] # Reset nếu lỗi
+            st.session_state['lo_trinh_tim_duoc'] = []
 
-    # --- HIỂN THỊ KẾT QUẢ RA MÀN HÌNH ---
     if st.session_state['lo_trinh_tim_duoc']:
         duong_di = st.session_state['lo_trinh_tim_duoc']
         chi_tiet = st.session_state['chi_tiet_lo_trinh']
@@ -539,21 +535,15 @@ with tab_ban_do:
 
         with cot_ban_do:
             m = folium.Map(location=st.session_state['tam_ban_do'], zoom_start=14, tiles="cartodbpositron")
-            them_cac_nut_len_ban_do(m, Do_thi_Pleiku)
             Fullscreen().add_to(m)
 
-            # Lấy tọa độ để vẽ (Cần lấy từ session state hoặc từ biến chọn nếu vừa bấm nút)
-            # Vì st.form không cập nhật biến ngoài ngay lập tức nếu chưa submit, 
-            # nhưng ở đây ta vẽ dựa trên kết quả đã lưu trong session state nên an toàn.
-            
-            # Lưu ý: Cần tìm lại tọa độ dựa trên session state nếu muốn marker hiện đúng khi đổi dropdown mà chưa bấm nút
-            # Tuy nhiên, để đơn giản, ta cứ lấy theo biến hiện tại (sẽ cập nhật sau khi bấm nút)
-            
-            coord_start = dia_diem_hop_le[diem_bat_dau]
-            coord_end = dia_diem_hop_le[diem_ket_thuc]
-
-            folium.Marker(coord_start, icon=folium.Icon(color="green", icon="play", prefix='fa'), popup="BẮT ĐẦU").add_to(m)
-            folium.Marker(coord_end, icon=folium.Icon(color="red", icon="flag", prefix='fa'), popup="KẾT THÚC").add_to(m)
+            # Marker A/B
+            coord_start = dia_diem_hop_le.get(diem_bat_dau, (0,0))
+            coord_end = dia_diem_hop_le.get(diem_ket_thuc, (0,0))
+            if coord_start != (0,0):
+                folium.Marker(coord_start, icon=folium.Icon(color="green", icon="play", prefix='fa'), popup="BẮT ĐẦU").add_to(m)
+            if coord_end != (0,0):
+                folium.Marker(coord_end, icon=folium.Icon(color="red", icon="flag", prefix='fa'), popup="KẾT THÚC").add_to(m)
             
             toa_do_duong_di = []
             nut_dau = Do_thi_Pleiku.nodes[duong_di[0]]
@@ -569,16 +559,34 @@ with tab_ban_do:
                     nut_v = Do_thi_Pleiku.nodes[v]
                     toa_do_duong_di.append((nut_v['y'], nut_v['x']))
 
-            mau_sac = "orange" if "DFS" in thuat_toan_tim_duong else ("purple" if "BFS" in thuat_toan_tim_duong else "#3498DB")
-            AntPath(toa_do_duong_di, color=mau_sac, weight=6, opacity=0.8, delay=1000).add_to(m)
+            # --- VẼ NÚT TRÊN ĐƯỜNG ĐI ---
+            # Chỉ vẽ node thuộc đường đi để không lag
+            for nut in duong_di:
+                data = Do_thi_Pleiku.nodes[nut]
+                folium.CircleMarker(
+                    location=[data['y'], data['x']],
+                    radius=2,          
+                    color="#555",     
+                    fill=True,
+                    fill_color="white",
+                    fill_opacity=1,
+                    weight=1,
+                    popup=f"Node: {nut}"
+                ).add_to(m)
 
-            folium.PolyLine([coord_start, toa_do_duong_di[0]], color="gray", weight=2, dash_array='5, 5').add_to(m)
-            folium.PolyLine([coord_end, toa_do_duong_di[-1]], color="gray", weight=2, dash_array='5, 5').add_to(m)
+            mau_sac = "orange" if "DFS" in thuat_toan_tim_duong else ("purple" if "BFS" in thuat_toan_tim_duong else "#3498DB")
+            # Hiệu ứng mờ mờ (AntPath)
+            AntPath(toa_do_duong_di, color=mau_sac, weight=5, opacity=0.8, delay=1000).add_to(m)
+
+            # Nét đứt nối vào
+            if coord_start != (0,0):
+                folium.PolyLine([coord_start, toa_do_duong_di[0]], color="gray", weight=2, dash_array='5, 5').add_to(m)
+            if coord_end != (0,0):
+                folium.PolyLine([coord_end, toa_do_duong_di[-1]], color="gray", weight=2, dash_array='5, 5').add_to(m)
 
             st_folium(m, width=900, height=600, returned_objects=[])
 
-    # --- MẶC ĐỊNH KHI MỚI VÀO (HOẶC CHƯA CÓ KẾT QUẢ) ---
+    # --- MẶC ĐỊNH KHI MỚI VÀO ---
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="cartodbpositron")
-        them_cac_nut_len_ban_do(m, Do_thi_Pleiku)
         st_folium(m, width=1200, height=600, returned_objects=[])
