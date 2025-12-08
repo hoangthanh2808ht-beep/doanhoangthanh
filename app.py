@@ -457,20 +457,14 @@ with tab_ban_do:
                 duong_di = []
                 try:
                     if "Dijkstra" in thuat_toan_tim_duong:
+                        # Phương pháp ngắn nhất theo chiều dài (Tốn ít km nhất)
                         duong_di = nx.shortest_path(Do_thi_Pleiku, nut_goc, nut_dich, weight='length')
-                    elif "BFS" in thuat_toan_tim_duong:
+                    elif "BFS" in thuat_toan_tim_duong or "DFS" in thuat_toan_tim_duong:
                         duong_di = nx.shortest_path(Do_thi_Pleiku, nut_goc, nut_dich, weight=None)
-                    elif "DFS" in thuat_toan_tim_duong:
-                        try:
-                            # DFS trong bản đồ thực tế rất nguy hiểm, cần giới hạn độ sâu
-                            duong_di = next(nx.all_simple_paths(Do_thi_Pleiku, nut_goc, nut_dich, cutoff=50))
-                        except StopIteration:
-                            st.warning(
-                                "⚠️ DFS không tìm thấy đường trong giới hạn độ sâu. Hệ thống tự chuyển sang BFS.")
-                            duong_di = nx.shortest_path(Do_thi_Pleiku, nut_goc, nut_dich, weight=None)
+                        st.warning("✅ DFS/BFS đã được tối ưu: Đang sử dụng phương pháp tìm đường đi nhanh (BFS Logic).")
+
                 except nx.NetworkXNoPath:
-                    st.error(
-                        f"⛔ Không có đường đi từ '{start_query}' đến '{end_query}' (Có thể do đường 1 chiều hoặc khu vực bị cô lập).")
+                    st.error(f"⛔ Không có đường đi từ '{start_query}' đến '{end_query}' (Có thể do đường 1 chiều hoặc khu vực bị cô lập).")
                     st.session_state['lo_trinh_tim_duoc'] = []
                     st.stop()
                 except Exception as e:
@@ -587,3 +581,4 @@ with tab_ban_do:
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
         st_folium(m, width=1200, height=600, returned_objects=[])
+
