@@ -465,7 +465,7 @@ with tab_ban_do:
                     elif "BFS" in thuat_toan_tim_duong:
                         # Trong NetworkX, shortest_path với weight=None chính là thuật toán BFS
                         duong_di = nx.shortest_path(Do_thi_Pleiku, nut_goc, nut_dich, weight=None)
-                        st.info(f"✅ Đang chạy BFS (Breadth-First Search): Tìm đường đi qua ít địa điểm trung gian nhất (bất kể xa gần).")
+                        st.info(f"✅ Đang chạy BFS : Tìm đường đi qua ít địa điểm trung gian nhất.")
 
                     # 3. TRƯỜNG HỢP DFS: Đi theo chiều sâu (Không đảm bảo ngắn nhất)
                     elif "DFS" in thuat_toan_tim_duong:
@@ -474,7 +474,7 @@ with tab_ban_do:
                         
                         if nut_dich in cay_dfs:
                             duong_di = nx.shortest_path(cay_dfs, nut_goc, nut_dich)
-                            st.warning(f"⚠️ Đang chạy DFS (Depth-First Search): Đường đi có thể rất dài và ngoằn ngoèo (đây là đặc trưng của thuật toán này).")
+                            st.warning(f"⚠️ Đang chạy DFS: Đường đi có thể rất dài đấy nhé .")
                         else:
                             raise nx.NetworkXNoPath # Không tìm thấy đích trong cây DFS
 
@@ -595,5 +595,6 @@ with tab_ban_do:
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
         st_folium(m, width=1200, height=600, returned_objects=[])
+
 
 
