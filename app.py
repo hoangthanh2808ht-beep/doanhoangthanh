@@ -665,14 +665,12 @@ with tab_ban_do:
             folium.PolyLine([dia_diem_hop_le[diem_bat_dau], toa_do_duong_di[0]], color="gray", weight=2, dash_array='5, 5').add_to(m)
             folium.PolyLine([dia_diem_hop_le[diem_ket_thuc], toa_do_duong_di[-1]], color="gray", weight=2, dash_array='5, 5').add_to(m)
 
-            st_folium(m, width=900, height=600)
-
-    # --- MẶC ĐỊNH KHI MỚI VÀO ---
+            st_folium(m, width=900, height=600, returned_objects=[])
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="cartodbpositron")
         
         # --- VẼ CÁC CHẤM (NODES) NHƯ YÊU CẦU ---
         them_cac_nut_len_ban_do(m, Do_thi_Pleiku)
         
-        st_folium(m, width=1200, height=600)
+        st_folium(m, width=1200, height=600, returned_objects=[])
 
