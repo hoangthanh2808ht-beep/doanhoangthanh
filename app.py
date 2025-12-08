@@ -48,6 +48,7 @@ st.markdown("""
     .dong-thoi-gian::before {
         content: ''; position: absolute; left: 19px; top: 35px; bottom: 0; width: 2px; background-color: #E0E0E0;
     }
+    /* ĐÃ SỬA LỖI CHÍNH TẢ Ở ĐÂY: _gian thành -gian */
     .dong-thoi-gian:last-child::before { display: none; }
 
     .icon-moc {
@@ -87,6 +88,7 @@ if 'tam_ban_do' not in st.session_state: st.session_state['tam_ban_do'] = [13.97
 if 'ten_diem_dau' not in st.session_state: st.session_state['ten_diem_dau'] = "Điểm A"
 if 'ten_diem_cuoi' not in st.session_state: st.session_state['ten_diem_cuoi'] = "Điểm B"
 if 'bounds_ban_do' not in st.session_state: st.session_state['bounds_ban_do'] = None
+if 'style_map_choice' not in st.session_state: st.session_state['style_map_choice'] = "Mặc định (OSM)"
 
 
 # -----------------------------------------------------------------------------
@@ -206,6 +208,25 @@ def thuat_toan_fleury(G_input):
             u = next_v
 
     return edges_path, "Thành công"
+
+# HÀM 4: Tạo nền bản đồ (Switch giao diện Tối/Sáng/Vệ tinh)
+def tao_ban_do_nen(location, zoom_start, style):
+    if style == "Chế độ Tối (Dark)":
+        m = folium.Map(location=location, zoom_start=zoom_start, tiles='CartoDB dark_matter')
+        line_color = "#00FFFF"
+    elif style == "Chế độ Sáng (Light)":
+        m = folium.Map(location=location, zoom_start=zoom_start, tiles='CartoDB positron')
+        line_color = "#E74C3C"
+    elif style == "Vệ tinh (Satellite)":
+        m = folium.Map(location=location, zoom_start=zoom_start, tiles=None)
+        folium.TileLayer(tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr='Esri', name='Esri Satellite', overlay=False, control=True).add_to(m)
+        folium.TileLayer(tiles='https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', attr='Esri Labels', name='Esri Labels', overlay=True, control=True).add_to(m)
+        line_color = "#FFFF00"
+    else:
+        m = folium.Map(location=location, zoom_start=zoom_start, tiles="OpenStreetMap")
+        line_color = "#3498DB"
+    Fullscreen().add_to(m)
+    return m, line_color
 
 
 # -----------------------------------------------------------------------------
@@ -413,8 +434,8 @@ with tab_ly_thuyet:
 with tab_ban_do:
     @st.cache_resource
     def tai_ban_do_pleiku():
-        # Bán kính 3km (Tối ưu tốc độ)
-        return ox.graph_from_point((13.9800, 108.0000), dist=3000, network_type='drive')
+        # Bán kính 5km (Tối ưu tốc độ & độ phủ)
+        return ox.graph_from_point((13.9800, 108.0000), dist=5000, network_type='drive')
 
 
     with st.spinner("Đang tải dữ liệu bản đồ TP. Pleiku (Khoảng 45 giây)..."):
@@ -437,14 +458,16 @@ with tab_ban_do:
         start_query = c1.text_input("📍 Điểm xuất phát:", value="Quảng trường Đại Đoàn Kết")
         end_query = c2.text_input("🏁 Điểm đến:", value="Sân bay Pleiku")
 
-        thuat_toan_tim_duong = c3.selectbox("Thuật toán:", ["Dijkstra", "BFS", "DFS"])
+        # ĐÃ THÊM LẠI: Phần chọn giao diện bản đồ để sử dụng được hàm tao_ban_do_nen
+        style_map = c3.selectbox("🎨 Giao diện:", ["Mặc định (OSM)", "Chế độ Tối (Dark)", "Chế độ Sáng (Light)", "Vệ tinh (Satellite)"])
+        
+        thuat_toan_tim_duong = st.selectbox("Thuật toán:", ["Dijkstra", "BFS", "DFS"])
         nut_tim_duong = st.form_submit_button("🚀 TÌM ĐƯỜNG NGAY", type="primary", use_container_width=True)
 
     if nut_tim_duong:
         with st.spinner(f"Đang tìm vị trí '{start_query}' và '{end_query}' trên bản đồ..."):
             try:
                 # 1. TÌM TỌA ĐỘ TỪ TÊN (GEOCODING)
-                # Thêm hậu tố Gia Lai, Vietnam để tìm chính xác hơn
                 try:
                     q_start = start_query if "Gia Lai" in start_query else f"{start_query}, Gia Lai, Vietnam"
                     q_end = end_query if "Gia Lai" in end_query else f"{end_query}, Gia Lai, Vietnam"
@@ -457,7 +480,6 @@ with tab_ban_do:
                     st.stop()
 
                 # 2. TÌM NODE TRÊN ĐỒ THỊ GẦN NHẤT
-                # Lưu ý: nearest_nodes nhận (G, X=Lon, Y=Lat)
                 nut_goc = ox.distance.nearest_nodes(Do_thi_Pleiku, start_point[1], start_point[0])
                 nut_dich = ox.distance.nearest_nodes(Do_thi_Pleiku, end_point[1], end_point[0])
 
@@ -471,7 +493,7 @@ with tab_ban_do:
                     elif "DFS" in thuat_toan_tim_duong:
                         try:
                             # DFS trong bản đồ thực tế rất nguy hiểm, cần giới hạn độ sâu
-                            duong_di = next(nx.all_simple_paths(Do_thi_Pleiku, nut_goc, nut_dich, cutoff=50))
+                            duong_di = next(nx.all_simple_paths(Do_thi_Pleiku, nut_goc, nut_dich, cutoff=30))
                         except StopIteration:
                             st.warning(
                                 "⚠️ DFS không tìm thấy đường trong giới hạn độ sâu. Hệ thống tự chuyển sang BFS.")
@@ -492,13 +514,14 @@ with tab_ban_do:
                                                   (start_point[1] + end_point[1]) / 2]
                 st.session_state['ten_diem_dau'] = start_query
                 st.session_state['ten_diem_cuoi'] = end_query
+                # Lưu style bản đồ để dùng khi vẽ lại
+                st.session_state['style_map_choice'] = style_map
 
                 # Tính toán giới hạn bản đồ để zoom vừa vặn (Fit Bounds)
                 if duong_di:
                     nodes_data = [Do_thi_Pleiku.nodes[n] for n in duong_di]
                     lats = [d['y'] for d in nodes_data]
                     lons = [d['x'] for d in nodes_data]
-                    # Sw [lat, lon], Ne [lat, lon]
                     st.session_state['bounds_ban_do'] = [[min(lats), min(lons)], [max(lats), max(lons)]]
 
             except Exception as e:
@@ -549,8 +572,9 @@ with tab_ban_do:
                 st.markdown(html_content, unsafe_allow_html=True)
 
         with cot_ban_do:
-            m = folium.Map(location=st.session_state['tam_ban_do'], zoom_start=14, tiles="OpenStreetMap")
-            Fullscreen().add_to(m)
+            # ĐÃ SỬA: Dùng hàm tao_ban_do_nen thay vì folium.Map mặc định để hiển thị vệ tinh/tối/sáng đúng
+            style_curr = st.session_state.get('style_map_choice', "Mặc định (OSM)")
+            m, line_color = tao_ban_do_nen(st.session_state['tam_ban_do'], 14, style_curr)
 
             start_node_data = Do_thi_Pleiku.nodes[duong_di[0]]
             end_node_data = Do_thi_Pleiku.nodes[duong_di[-1]]
@@ -579,8 +603,11 @@ with tab_ban_do:
 
             mau_sac = "orange" if "DFS" in thuat_toan_tim_duong else (
                 "purple" if "BFS" in thuat_toan_tim_duong else "#3498DB")
+            
+            # Nếu dùng vệ tinh thì màu line phải nổi (Vàng), còn lại dùng màu theo thuật toán
+            final_color = line_color if style_curr == "Vệ tinh (Satellite)" else mau_sac
 
-            AntPath(toa_do_duong_di, color=mau_sac, weight=5, opacity=0.8, delay=1000).add_to(m)
+            AntPath(toa_do_duong_di, color=final_color, weight=5, opacity=0.8, delay=1000).add_to(m)
 
             if coord_start: folium.PolyLine([coord_start, toa_do_duong_di[0]], color="gray", weight=2,
                                             dash_array='5, 5').add_to(m)
@@ -593,6 +620,7 @@ with tab_ban_do:
 
     # --- MẶC ĐỊNH KHI MỚI VÀO ---
     else:
-        m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
+        # ĐÃ SỬA: Dùng tao_ban_do_nen cho đồng bộ
+        style_curr = st.session_state.get('style_map_choice', "Mặc định (OSM)")
+        m, _ = tao_ban_do_nen([13.9785, 108.0051], 14, style_curr)
         st_folium(m, width=1200, height=600, returned_objects=[])
-
