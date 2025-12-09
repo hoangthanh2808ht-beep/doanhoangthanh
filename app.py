@@ -592,11 +592,3 @@ with tab_ban_do:
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
         st_folium(m, width=1200, height=600, returned_objects=[])
-
-
-
-
-
-
-
-
