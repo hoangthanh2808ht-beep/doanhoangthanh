@@ -415,9 +415,7 @@ with tab_ban_do:
     def tai_ban_do_pleiku():
         G = ox.graph_from_point((13.9800, 108.0000), dist=3000,network_type='drive' )
     
-        G = ox.project_graph(G)
-        return G
-    with st.spinner("Đang tải dữ liệu bản đồ TP. Pleiku (Khoảng 45 giây)..."):
+    with st.spinner("Đang tải dữ liệu bản đồ TP. Pleiku (bạn chờ xíu ...)"):
         try:
             Do_thi_Pleiku = tai_ban_do_pleiku()
             st.success("✅ Đã tải xong bản đồ!")
@@ -425,7 +423,7 @@ with tab_ban_do:
             st.error("Lỗi tải bản đồ, vui lòng thử lại!")
             st.stop()
 
-    st.markdown("### 🔍 Nhập tên địa điểm (Ví dụ: Chợ Pleiku, Sân vận động,...)")
+    st.markdown("### 🔍 Nhập tên địa điểm (Ví dụ: Quảng trường Đại Đoàn Kết, Sân vận động,...)")
 
     with st.form("form_tim_duong"):
         c1, c2, c3 = st.columns([1.5, 1.5, 1])
@@ -595,6 +593,7 @@ with tab_ban_do:
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
         st_folium(m, width=1200, height=600, returned_objects=[])
+
 
 
 
