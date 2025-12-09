@@ -412,8 +412,8 @@ with tab_ly_thuyet:
 # =============================================================================
 with tab_ban_do:
     @st.cache_resource
-def tai_ban_do_pleiku():
-    return ox.graph_from_point((13.9800, 108.0000), dist=3000, network_type='drive')
+    def tai_ban_do_pleiku():
+         return ox.graph_from_point((13.9800, 108.0000), dist=3000, network_type='drive')
     with st.spinner("Đang tải dữ liệu bản đồ TP. Pleiku (bạn chờ xíu ...)"):
         try:
             Do_thi_Pleiku = tai_ban_do_pleiku()
@@ -592,6 +592,7 @@ def tai_ban_do_pleiku():
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
         st_folium(m, width=1200, height=600, returned_objects=[])
+
 
 
 
