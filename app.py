@@ -135,7 +135,7 @@ def lay_thong_tin_lo_trinh(do_thi, danh_sach_nut):
 def ve_do_thi_ly_thuyet(do_thi, duong_di=None, danh_sach_canh=None, tieu_de=""):
     is_directed = do_thi.is_directed()
 
-    hinh_ve, truc = plt.subplots(figsize=(10, 8))
+    hinh_ve, truc = plt.subplots(figsize=(7, 55))
     try:
         vi_tri = nx.spring_layout(do_thi, seed=42)
         nx.draw(do_thi, vi_tri, with_labels=True, node_color='#D6EAF8', edge_color='#BDC3C7', node_size=600,
@@ -225,7 +225,7 @@ with tab_ly_thuyet:
         loai_do_thi = st.radio("Chọn loại:", ["Vô hướng", "Có hướng"], horizontal=True)
         co_huong = True if loai_do_thi == "Có hướng" else False
 
-        mac_dinh = "A B 4\nA C 2\nB C 5\nB D 10\nC E 3\nD F 11\nE D 4\nC D 1"
+        mac_dinh = "A B 6\nA C 1\nB C 4\nB D 7\nC E 2\nC D 9\nE B 3\nE F 4\nD F 8\nD G 12\nF G 1\nE H 10\nG H 2"
         du_lieu_nhap = st.text_area("Nhập danh sách cạnh (u v w):", mac_dinh, height=150)
 
         c_nut_tao, c_nut_luu = st.columns([1, 1])
@@ -300,7 +300,7 @@ with tab_ly_thuyet:
                 else:
                     st.warning("Đồ thị chưa có cạnh nào.")
 
-            if st.button("Kiểm tra 2 phía (Bipartite)"):
+            if st.button("Kiểm tra 2 phía"):
                 kq = nx.is_bipartite(st.session_state['do_thi'])
                 st.write(f"Kết quả: {'✅ Có' if kq else '❌ Không'}")
 
@@ -326,7 +326,7 @@ with tab_ly_thuyet:
                     except:
                         st.error("Lỗi chạy DFS")
 
-            if st.button("Chạy Dijkstra (Ngắn nhất)"):
+            if st.button("Chạy Dijkstra"):
                 try:
                     duong_ngan_nhat = nx.shortest_path(st.session_state['do_thi'], nut_bat_dau, nut_ket_thuc,
                                                        weight='weight')
@@ -371,7 +371,7 @@ with tab_ly_thuyet:
                     except Exception as e:
                         st.error(f"Lỗi: {e}")
                 else:
-                    st.error("Lỗi: Đồ thị hiện tại là VÔ HƯỚNG. Hãy chọn 'Có hướng' và bấm 'Khởi tạo Đồ thị' lại.")
+                    st.error("Lỗi: Đồ thị hiện tại là VÔ HƯỚNG. Hãy chọn 'Có hướng' và bấm 'Khởi tạo Đồ thị' lại nhé.")
 
             st.divider()
             col_fleury, col_hierholzer = st.columns(2)
@@ -379,16 +379,16 @@ with tab_ly_thuyet:
             with col_fleury:
                 if st.button("Fleury"):
                     if st.session_state['do_thi'].is_directed():
-                        st.error("Fleury cơ bản chỉ áp dụng cho VÔ HƯỚNG để minh họa rõ nhất việc 'né cầu'.")
+                        st.error("Fleury cơ bản chỉ áp dụng cho VÔ HƯỚNG.")
                     elif not nx.is_connected(st.session_state['do_thi']):
                         st.error("Đồ thị phải liên thông!")
                     else:
-                        with st.spinner("Đang chạy Fleury (Né cầu)..."):
+                        with st.spinner("Đang chạy Fleury ..."):
                             ds_canh, msg = thuat_toan_fleury(st.session_state['do_thi'])
                             if ds_canh:
                                 st.info(f"Kết quả Fleury: {ds_canh}")
                                 ve_do_thi_ly_thuyet(st.session_state['do_thi'], danh_sach_canh=ds_canh,
-                                                    tieu_de="Fleury (Né Cầu)")
+                                                    tieu_de="Fleury")
                             else:
                                 st.error(msg)
 
@@ -594,3 +594,4 @@ with tab_ban_do:
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
         st_folium(m, width=1200, height=600, returned_objects=[])
+
