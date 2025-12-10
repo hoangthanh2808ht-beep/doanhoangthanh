@@ -135,7 +135,7 @@ def lay_thong_tin_lo_trinh(do_thi, danh_sach_nut):
 def ve_do_thi_ly_thuyet(do_thi, duong_di=None, danh_sach_canh=None, tieu_de=""):
     is_directed = do_thi.is_directed()
 
-    hinh_ve, truc = plt.subplots(figsize=(8, 5))
+    hinh_ve, truc = plt.subplots(figsize=(10, 8))
     try:
         vi_tri = nx.spring_layout(do_thi, seed=42)
         nx.draw(do_thi, vi_tri, with_labels=True, node_color='#D6EAF8', edge_color='#BDC3C7', node_size=600,
@@ -214,30 +214,18 @@ st.title("🏙️ ỨNG DỤNG THUẬT TOÁN CHO HỆ THỐNG DẪN ĐƯỜNG TP
 
 tab_ly_thuyet, tab_ban_do = st.tabs(["📚 PHẦN 1: LÝ THUYẾT ĐỒ THỊ", "🚀 PHẦN 2: BẢN ĐỒ THỰC TẾ"])
 
-
 # =============================================================================
-# TAB 1: LÝ THUYẾT 
+# TAB 1: LÝ THUYẾT
 # =============================================================================
 with tab_ly_thuyet:
     cot_trai, cot_phai = st.columns([1, 1.5])
 
     with cot_trai:
         st.subheader("🛠️ Cấu hình Đồ thị")
-        
-        c1_nho, c2_nho = st.columns(2)
-        with c1_nho:
-            loai_do_thi = st.radio("Loại:", ["Vô hướng", "Có hướng"], horizontal=True)
-        with c2_nho:
-            che_do_trong_so = st.radio("Trọng số:", ["Có trọng số", "Không trọng số"], horizontal=True)
-        
+        loai_do_thi = st.radio("Chọn loại:", ["Vô hướng", "Có hướng"], horizontal=True)
         co_huong = True if loai_do_thi == "Có hướng" else False
-        co_trong_so = True if che_do_trong_so == "Có trọng số" else False
 
-        if co_trong_so:
-            mac_dinh = "A B 4\nA C 2\nB C 5\nB D 10\nC E 3\nD F 11\nE D 4\nC D 1"
-        else:
-            mac_dinh = "A B\nA C\nB C\nB D\nC E\nD F\nE D\nC D"
-
+        mac_dinh = "A B 4\nA C 2\nB C 5\nB D 10\nC E 3\nD F 11\nE D 4\nC D 1"
         du_lieu_nhap = st.text_area("Nhập danh sách cạnh (u v w):", mac_dinh, height=150)
 
         c_nut_tao, c_nut_luu = st.columns([1, 1])
@@ -249,12 +237,7 @@ with tab_ly_thuyet:
                         phan = dong.split()
                         if len(phan) >= 2:
                             u, v = phan[0], phan[1]
-                            
-                            if co_trong_so:
-                                trong_so = int(phan[2]) if len(phan) > 2 else 1
-                            else:
-                                trong_so = 1
-
+                            trong_so = int(phan[2]) if len(phan) > 2 else 1
                             G_moi.add_edge(u, v, weight=trong_so)
 
                     st.session_state['do_thi'] = G_moi
@@ -275,13 +258,12 @@ with tab_ly_thuyet:
 
     with cot_phai:
         if len(st.session_state['do_thi']) > 0:
-            tieu_de = "Đồ thị " + ("Có hướng" if co_huong else "Vô hướng")
-            tieu_de += " - Có trọng số" if co_trong_so else " - Không trọng số"
-            ve_do_thi_ly_thuyet(st.session_state['do_thi'], tieu_de=tieu_de)
+            ve_do_thi_ly_thuyet(st.session_state['do_thi'], tieu_de="Hình ảnh trực quan")
 
     if len(st.session_state['do_thi']) > 0:
         st.divider()
         c1, c2, c3 = st.columns(3)
+
         with c1:
             st.info("1. Biểu diễn dữ liệu ")
             dang_xem = st.selectbox("Chọn cách xem:", ["Ma trận kề", "Danh sách kề", "Danh sách cạnh"])
@@ -430,7 +412,9 @@ with tab_ly_thuyet:
 with tab_ban_do:
     @st.cache_resource
     def tai_ban_do_pleiku():
-         return ox.graph_from_point((13.9800, 108.0000), dist=3000, network_type='drive')
+        return ox.graph_from_point((13.9800, 108.0000), dist=3000, network_type='drive')
+
+
     with st.spinner("Đang tải dữ liệu bản đồ TP. Pleiku (bạn chờ xíu ...)"):
         try:
             Do_thi_Pleiku = tai_ban_do_pleiku()
@@ -483,17 +467,18 @@ with tab_ban_do:
 
                     # 3. TRƯỜNG HỢP DFS: Đi theo chiều sâu (Không đảm bảo ngắn nhất)
                     elif "DFS" in thuat_toan_tim_duong:
-                        
+
                         cay_dfs = nx.dfs_tree(Do_thi_Pleiku, source=nut_goc)
-                        
+
                         if nut_dich in cay_dfs:
                             duong_di = nx.shortest_path(cay_dfs, nut_goc, nut_dich)
                             st.warning(f"⚠️ Đang chạy DFS: Đường đi có thể rất dài đấy nhé .")
                         else:
-                            raise nx.NetworkXNoPath # Không tìm thấy đích trong cây DFS
+                            raise nx.NetworkXNoPath  # Không tìm thấy đích trong cây DFS
 
                 except nx.NetworkXNoPath:
-                    st.error(f"⛔ Không có đường đi từ '{start_query}' đến '{end_query}' (Có thể do đường 1 chiều hoặc khu vực bị cô lập).")
+                    st.error(
+                        f"⛔ Không có đường đi từ '{start_query}' đến '{end_query}' (Có thể do đường 1 chiều hoặc khu vực bị cô lập).")
                     st.session_state['lo_trinh_tim_duoc'] = []
                     st.stop()
                 except Exception as e:
@@ -609,5 +594,3 @@ with tab_ban_do:
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
         st_folium(m, width=1200, height=600, returned_objects=[])
-
-
