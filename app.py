@@ -225,7 +225,7 @@ with tab_ly_thuyet:
         loai_do_thi = st.radio("Chọn loại:", ["Vô hướng", "Có hướng"], horizontal=True)
         co_huong = True if loai_do_thi == "Có hướng" else False
 
-        mac_dinh = "A B 6\nA C 1\nB C 4\nB D 7\nC E 2\nC D 9\nE B 3\nE F 4\nD F 8\nD G 12\nF G 1\nE H 10\nG H 2"
+        mac_dinh = "A B 4\nA C 2\nB C 5\nB D 10\nC E 3\nD F 11\nE D 4\nC D 1"
         du_lieu_nhap = st.text_area("Nhập danh sách cạnh (u v w):", mac_dinh, height=150)
 
         c_nut_tao, c_nut_luu = st.columns([1, 1])
@@ -594,5 +594,6 @@ with tab_ban_do:
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
         st_folium(m, width=1200, height=600, returned_objects=[])
+
 
 
