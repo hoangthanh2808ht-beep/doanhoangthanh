@@ -135,7 +135,7 @@ def lay_thong_tin_lo_trinh(do_thi, danh_sach_nut):
 def ve_do_thi_ly_thuyet(do_thi, duong_di=None, danh_sach_canh=None, tieu_de=""):
     is_directed = do_thi.is_directed()
 
-    hinh_ve, truc = plt.subplots(figsize=(7, 55))
+    hinh_ve, truc = plt.subplots(figsize=(7, 5))
     try:
         vi_tri = nx.spring_layout(do_thi, seed=42)
         nx.draw(do_thi, vi_tri, with_labels=True, node_color='#D6EAF8', edge_color='#BDC3C7', node_size=600,
@@ -594,4 +594,5 @@ with tab_ban_do:
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
         st_folium(m, width=1200, height=600, returned_objects=[])
+
 
