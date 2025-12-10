@@ -214,6 +214,7 @@ st.title("🏙️ ỨNG DỤNG THUẬT TOÁN CHO HỆ THỐNG DẪN ĐƯỜNG TP
 
 tab_ly_thuyet, tab_ban_do = st.tabs(["📚 PHẦN 1: LÝ THUYẾT ĐỒ THỊ", "🚀 PHẦN 2: BẢN ĐỒ THỰC TẾ"])
 
+
 # =============================================================================
 # TAB 1: LÝ THUYẾT 
 # =============================================================================
@@ -222,10 +223,21 @@ with tab_ly_thuyet:
 
     with cot_trai:
         st.subheader("🛠️ Cấu hình Đồ thị")
-        loai_do_thi = st.radio("Chọn loại:", ["Vô hướng", "Có hướng"], horizontal=True)
+        
+        c1_nho, c2_nho = st.columns(2)
+        with c1_nho:
+            loai_do_thi = st.radio("Loại:", ["Vô hướng", "Có hướng"], horizontal=True)
+        with c2_nho:
+            che_do_trong_so = st.radio("Trọng số:", ["Có trọng số", "Không trọng số"], horizontal=True)
+        
         co_huong = True if loai_do_thi == "Có hướng" else False
+        co_trong_so = True if che_do_trong_so == "Có trọng số" else False
 
-        mac_dinh = "A B 4\nA C 2\nB C 5\nB D 10\nC E 3\nD F 11\nE D 4\nC D 1"
+        if co_trong_so:
+            mac_dinh = "A B 4\nA C 2\nB C 5\nB D 10\nC E 3\nD F 11\nE D 4\nC D 1"
+        else:
+            mac_dinh = "A B\nA C\nB C\nB D\nC E\nD F\nE D\nC D"
+
         du_lieu_nhap = st.text_area("Nhập danh sách cạnh (u v w):", mac_dinh, height=150)
 
         c_nut_tao, c_nut_luu = st.columns([1, 1])
@@ -237,7 +249,12 @@ with tab_ly_thuyet:
                         phan = dong.split()
                         if len(phan) >= 2:
                             u, v = phan[0], phan[1]
-                            trong_so = int(phan[2]) if len(phan) > 2 else 1
+                            
+                            if co_trong_so:
+                                trong_so = int(phan[2]) if len(phan) > 2 else 1
+                            else:
+                                trong_so = 1
+
                             G_moi.add_edge(u, v, weight=trong_so)
 
                     st.session_state['do_thi'] = G_moi
@@ -258,12 +275,13 @@ with tab_ly_thuyet:
 
     with cot_phai:
         if len(st.session_state['do_thi']) > 0:
-            ve_do_thi_ly_thuyet(st.session_state['do_thi'], tieu_de="Hình ảnh trực quan")
+            tieu_de = "Đồ thị " + ("Có hướng" if co_huong else "Vô hướng")
+            tieu_de += " - Có trọng số" if co_trong_so else " - Không trọng số"
+            ve_do_thi_ly_thuyet(st.session_state['do_thi'], tieu_de=tieu_de)
 
     if len(st.session_state['do_thi']) > 0:
         st.divider()
         c1, c2, c3 = st.columns(3)
-
         with c1:
             st.info("1. Biểu diễn dữ liệu ")
             dang_xem = st.selectbox("Chọn cách xem:", ["Ma trận kề", "Danh sách kề", "Danh sách cạnh"])
@@ -591,4 +609,5 @@ with tab_ban_do:
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
         st_folium(m, width=1200, height=600, returned_objects=[])
+
 
