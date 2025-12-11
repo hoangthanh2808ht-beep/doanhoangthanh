@@ -268,10 +268,6 @@ with tab_ly_thuyet:
                 use_container_width=True
             )
         
-        # Thêm khu vực hiển thị Log
-        st.subheader("📜 Log chạy thuật toán")
-        st.markdown(f'<div class="khung-log">{st.session_state["log_text"]}</div>', unsafe_allow_html=True)
-
     with cot_phai:
         if len(st.session_state['do_thi']) > 0:
             ve_do_thi_ly_thuyet(st.session_state['do_thi'], tieu_de="Hình ảnh trực quan")
@@ -324,7 +320,7 @@ with tab_ly_thuyet:
             st.warning("2. Thuật toán Tìm kiếm ")
             nut_bat_dau = st.selectbox("Điểm bắt đầu:", list(st.session_state['do_thi'].nodes()))
             nut_ket_thuc = st.selectbox("Điểm kết thúc:", list(st.session_state['do_thi'].nodes()),
-                                            index=len(st.session_state['do_thi'].nodes()) - 1)
+                                        index=len(st.session_state['do_thi'].nodes()) - 1)
 
             c2a, c2b = st.columns(2)
             with c2a:
@@ -433,6 +429,12 @@ with tab_ly_thuyet:
                             st.warning("Hierholzer chỉ tìm CHU TRÌNH (Circuit). Đồ thị này không có chu trình Euler.")
                     except Exception as e:
                         st.error(f"Lỗi: {e}")
+    
+    if len(st.session_state['do_thi']) > 0:
+        st.divider()
+        st.subheader("📜 Log chạy thuật toán")
+        st.markdown(f'<div class="khung-log">{st.session_state["log_text"]}</div>', unsafe_allow_html=True)
+
 
 # =============================================================================
 # TAB 2: BẢN ĐỒ PLEIKU
