@@ -232,24 +232,47 @@ def trace_dfs(G, start):
                 if v not in visited: stack.append(v); parent_map[v] = u
     return steps
 
-def trace_dijkstra(G, start, end):
+def trace_dijkstra_improved(G, start, end):
     import heapq
-    steps = []; pq = [(0, start, [])]; visited = set()
-    min_dist = {n: float('inf') for n in G.nodes}; min_dist[start] = 0
-    edges_drawn = []
+    steps = []
+    pq = [(0, start)]
+    dist = {n: float('inf') for n in G.nodes}; dist[start] = 0
+    parent = {}
+    visited = set()
+    steps.append({"nodes": [], "edges": [], "desc": f"Khởi tạo, start={start}"})
+
     while pq:
-        cost, u, path = heapq.heappop(pq)
-        if u not in visited:
-            visited.add(u)
-            if path: edges_drawn.append((path[-1], u))
-            steps.append({"nodes": list(visited), "edges": list(edges_drawn), "desc": f"Chọn {u} (Gần nhất: {cost})"})
-            if u == end: break
-            for v in G.neighbors(u):
-                w = G[u][v].get('weight', 1)
-                if cost + w < min_dist[v]:
-                    min_dist[v] = cost + w
-                    heapq.heappush(pq, (cost + w, v, path + [u]))
+        cost, u = heapq.heappop(pq)
+        if u in visited: 
+            continue
+        visited.add(u)
+        # rebuild path from start->u
+        path = []
+        cur = u
+        while cur in parent:
+            path.append(cur)
+            cur = parent[cur]
+        path = list(reversed(path + [u])) if path else [start] if u==start else [u]
+        steps.append({"nodes": list(visited), "edges": [], "desc": f"Chọn {u} (dist={cost}), path={'->'.join(map(str,path))}"})
+        if u == end:
+            break
+        for v in G.neighbors(u):
+            # handle MultiGraph attribute shape:
+            attr = G.get_edge_data(u, v)
+            w = 1
+            if isinstance(attr, dict) and any(isinstance(k, int) for k in attr.keys()):
+                # MultiEdge: choose min weight among parallel edges
+                w = min([d.get('weight', 1) for d in attr.values()])
+            else:
+                w = attr.get('weight', 1) if isinstance(attr, dict) else 1
+
+            if cost + w < dist.get(v, float('inf')):
+                dist[v] = cost + w
+                parent[v] = u
+                heapq.heappush(pq, (dist[v], v))
+                steps.append({"nodes": list(visited), "edges": [], "desc": f"  Relax {u}->{v}, new_dist={dist[v]}"})
     return steps
+
 
 def trace_prim(G):
     steps = []; visited = {list(G.nodes())[0]}; mst_edges = []
@@ -718,6 +741,7 @@ with tab_ban_do:
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
         st_folium(m, width=1200, height=600, returned_objects=[])
+
 
 
 
