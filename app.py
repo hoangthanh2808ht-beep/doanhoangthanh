@@ -37,7 +37,7 @@ st.markdown("""
         max-height: 600px;
         overflow-y: auto;
     }
-    
+
     /* Khung Log Lưu vết */
     .khung-log {
         background-color: #F8F9F9;
@@ -100,7 +100,7 @@ if 'tam_ban_do' not in st.session_state: st.session_state['tam_ban_do'] = [13.97
 if 'ten_diem_dau' not in st.session_state: st.session_state['ten_diem_dau'] = "Điểm A"
 if 'ten_diem_cuoi' not in st.session_state: st.session_state['ten_diem_cuoi'] = "Điểm B"
 if 'bounds_ban_do' not in st.session_state: st.session_state['bounds_ban_do'] = None
-if 'log_text' not in st.session_state: st.session_state['log_text'] = "" # Thêm biến lưu vết
+if 'log_text' not in st.session_state: st.session_state['log_text'] = ""  # Thêm biến lưu vết
 
 
 # -----------------------------------------------------------------------------
@@ -218,6 +218,8 @@ def thuat_toan_fleury(G_input):
             u = next_v
 
     return edges_path, "Thành công"
+
+
 # -----------------------------------------------------------------------------
 # GIAO DIỆN CHÍNH CỦA ỨNG DỤNG
 # -----------------------------------------------------------------------------
@@ -252,7 +254,7 @@ with tab_ly_thuyet:
                             G_moi.add_edge(u, v, weight=trong_so)
 
                     st.session_state['do_thi'] = G_moi
-                    st.session_state['log_text'] = "Đã khởi tạo đồ thị mới.\n" # Reset log
+                    st.session_state['log_text'] = "Đã khởi tạo đồ thị mới.\n"  # Reset log
                     st.success("Tạo thành công!")
                 except ValueError:
                     st.error("Lỗi: Trọng số phải là số nguyên!")
@@ -267,7 +269,6 @@ with tab_ly_thuyet:
                 mime="text/plain",
                 use_container_width=True
             )
-        
 
     with cot_phai:
         if len(st.session_state['do_thi']) > 0:
@@ -328,7 +329,8 @@ with tab_ly_thuyet:
                 if st.button("Chạy BFS"):
                     try:
                         edges_bfs = list(nx.bfs_tree(st.session_state['do_thi'], nut_bat_dau).edges())
-                        st.session_state['log_text'] = f"--- BFS từ {nut_bat_dau} ---\nThứ tự duyệt: {edges_bfs}\n" # Log trace
+                        st.session_state[
+                            'log_text'] = f"--- BFS từ {nut_bat_dau} ---\nThứ tự duyệt: {edges_bfs}\n"  # Log trace
                         ve_do_thi_ly_thuyet(st.session_state['do_thi'], danh_sach_canh=edges_bfs, tieu_de="Duyệt BFS")
                     except:
                         st.error("Lỗi chạy BFS")
@@ -336,7 +338,8 @@ with tab_ly_thuyet:
                 if st.button("Chạy DFS"):
                     try:
                         edges_dfs = list(nx.dfs_tree(st.session_state['do_thi'], nut_bat_dau).edges())
-                        st.session_state['log_text'] = f"--- DFS từ {nut_bat_dau} ---\nThứ tự duyệt: {edges_dfs}\n" # Log trace
+                        st.session_state[
+                            'log_text'] = f"--- DFS từ {nut_bat_dau} ---\nThứ tự duyệt: {edges_dfs}\n"  # Log trace
                         ve_do_thi_ly_thuyet(st.session_state['do_thi'], danh_sach_canh=edges_dfs, tieu_de="Duyệt DFS")
                     except:
                         st.error("Lỗi chạy DFS")
@@ -345,8 +348,10 @@ with tab_ly_thuyet:
                 try:
                     duong_ngan_nhat = nx.shortest_path(st.session_state['do_thi'], nut_bat_dau, nut_ket_thuc,
                                                        weight='weight')
-                    chi_phi = nx.shortest_path_length(st.session_state['do_thi'], nut_bat_dau, nut_ket_thuc, weight='weight')
-                    st.session_state['log_text'] = f"--- Dijkstra ({nut_bat_dau} -> {nut_ket_thuc}) ---\nĐường đi: {duong_ngan_nhat}\nTổng trọng số: {chi_phi}\n" # Log trace
+                    chi_phi = nx.shortest_path_length(st.session_state['do_thi'], nut_bat_dau, nut_ket_thuc,
+                                                      weight='weight')
+                    st.session_state[
+                        'log_text'] = f"--- Dijkstra ({nut_bat_dau} -> {nut_ket_thuc}) ---\nĐường đi: {duong_ngan_nhat}\nTổng trọng số: {chi_phi}\n"  # Log trace
                     ve_do_thi_ly_thuyet(st.session_state['do_thi'], duong_di=duong_ngan_nhat,
                                         tieu_de="Đường đi ngắn nhất (Dijkstra)")
                 except:
@@ -360,7 +365,8 @@ with tab_ly_thuyet:
                 if st.button(" Prim"):
                     if not co_huong and nx.is_connected(st.session_state['do_thi']):
                         cay = nx.minimum_spanning_tree(st.session_state['do_thi'], algorithm='prim')
-                        st.session_state['log_text'] = f"--- Prim MST ---\nCác cạnh trong cây khung: {list(cay.edges())}\nTổng trọng số: {cay.size(weight='weight')}\n" # Log trace
+                        st.session_state[
+                            'log_text'] = f"--- Prim MST ---\nCác cạnh trong cây khung: {list(cay.edges())}\nTổng trọng số: {cay.size(weight='weight')}\n"  # Log trace
                         ve_do_thi_ly_thuyet(st.session_state['do_thi'], danh_sach_canh=list(cay.edges()),
                                             tieu_de=f"Prim MST (W={cay.size(weight='weight')})")
                     else:
@@ -369,7 +375,8 @@ with tab_ly_thuyet:
                 if st.button(" Kruskal"):
                     if not co_huong and nx.is_connected(st.session_state['do_thi']):
                         cay = nx.minimum_spanning_tree(st.session_state['do_thi'], algorithm='kruskal')
-                        st.session_state['log_text'] = f"--- Kruskal MST ---\nCác cạnh trong cây khung: {list(cay.edges())}\nTổng trọng số: {cay.size(weight='weight')}\n" # Log trace
+                        st.session_state[
+                            'log_text'] = f"--- Kruskal MST ---\nCác cạnh trong cây khung: {list(cay.edges())}\nTổng trọng số: {cay.size(weight='weight')}\n"  # Log trace
                         ve_do_thi_ly_thuyet(st.session_state['do_thi'], danh_sach_canh=list(cay.edges()),
                                             tieu_de=f"Kruskal MST (W={cay.size(weight='weight')})")
                     else:
@@ -385,10 +392,11 @@ with tab_ly_thuyet:
                         log_flow = ""
                         for u in flow_dict:
                             for v, f in flow_dict[u].items():
-                                if f > 0: 
+                                if f > 0:
                                     canh_luong.append((u, v))
                                     log_flow += f"({u}->{v}: {f}), "
-                        st.session_state['log_text'] = f"--- Ford-Fulkerson ---\nLuồng cực đại: {val}\nChi tiết luồng: {log_flow}\n" # Log trace
+                        st.session_state[
+                            'log_text'] = f"--- Ford-Fulkerson ---\nLuồng cực đại: {val}\nChi tiết luồng: {log_flow}\n"  # Log trace
                         ve_do_thi_ly_thuyet(st.session_state['do_thi'], danh_sach_canh=canh_luong,
                                             tieu_de=f"Luồng cực đại: {val}")
                     except Exception as e:
@@ -409,7 +417,8 @@ with tab_ly_thuyet:
                         with st.spinner("Đang chạy Fleury ..."):
                             ds_canh, msg = thuat_toan_fleury(st.session_state['do_thi'])
                             if ds_canh:
-                                st.session_state['log_text'] = f"--- Fleury ---\nChu trình/Đường đi Euler: {ds_canh}\n" # Log trace
+                                st.session_state[
+                                    'log_text'] = f"--- Fleury ---\nChu trình/Đường đi Euler: {ds_canh}\n"  # Log trace
                                 st.info(f"Kết quả Fleury: {ds_canh}")
                                 ve_do_thi_ly_thuyet(st.session_state['do_thi'], danh_sach_canh=ds_canh,
                                                     tieu_de="Fleury")
@@ -422,7 +431,8 @@ with tab_ly_thuyet:
                         if nx.is_eulerian(st.session_state['do_thi']):
                             ct = list(nx.eulerian_circuit(st.session_state['do_thi']))
                             ds_canh = [(u, v) for u, v in ct]
-                            st.session_state['log_text'] = f"--- Hierholzer ---\nChu trình Euler: {ds_canh}\n" # Log trace
+                            st.session_state[
+                                'log_text'] = f"--- Hierholzer ---\nChu trình Euler: {ds_canh}\n"  # Log trace
                             st.success(f"Chu trình Euler (Hierholzer): {ds_canh}")
                             ve_do_thi_ly_thuyet(st.session_state['do_thi'], danh_sach_canh=ds_canh,
                                                 tieu_de="Hierholzer Circuit")
@@ -430,12 +440,11 @@ with tab_ly_thuyet:
                             st.warning("Hierholzer chỉ tìm CHU TRÌNH (Circuit). Đồ thị này không có chu trình Euler.")
                     except Exception as e:
                         st.error(f"Lỗi: {e}")
-    
+
     if len(st.session_state['do_thi']) > 0:
         st.divider()
         st.subheader("📜 Log chạy thuật toán")
         st.markdown(f'<div class="khung-log">{st.session_state["log_text"]}</div>', unsafe_allow_html=True)
-
 
 # =============================================================================
 # TAB 2: BẢN ĐỒ PLEIKU
@@ -443,7 +452,7 @@ with tab_ly_thuyet:
 with tab_ban_do:
     @st.cache_resource
     def tai_ban_do_pleiku():
-        return ox.graph_from_point((13.9800, 108.0000), dist=3000, network_type='drive')
+        return ox.graph_from_point((13.9800, 108.0000), dist=3200, network_type='drive')
 
 
     with st.spinner("Đang tải dữ liệu bản đồ TP. Pleiku (bạn chờ xíu ...)"):
@@ -610,8 +619,6 @@ with tab_ban_do:
 
             if coord_start: folium.PolyLine([coord_start, toa_do_duong_di[0]], color="gray", weight=2,
                                             dash_array='5, 5').add_to(m)
-
-            # --- TÍNH NĂNG MỚI: AUTO ZOOM VỪA VẶN LỘ TRÌNH ---
             if 'bounds_ban_do' in st.session_state and st.session_state['bounds_ban_do']:
                 m.fit_bounds(st.session_state['bounds_ban_do'])
 
@@ -620,6 +627,3 @@ with tab_ban_do:
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
         st_folium(m, width=1200, height=600, returned_objects=[])
-
-
-
