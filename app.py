@@ -205,7 +205,131 @@ def thuat_toan_fleury(G_input):
             u = next_v
 
     return edges_path, "Thành công"
+# --- CÁC HÀM THUẬT TOÁN TRACE (MÔ PHỎNG TỪNG BƯỚC) ---
+def trace_bfs(G, start):
+    steps = []; visited = {start}; queue = [start]; edges_traversed = []
+    steps.append({"nodes": list(visited), "edges": [], "desc": f"Khởi tạo tại {start}"})
+    while queue:
+        u = queue.pop(0)
+        for v in G.neighbors(u):
+            if v not in visited:
+                visited.add(v); queue.append(v); edges_traversed.append((u, v))
+                steps.append({"nodes": list(visited), "edges": list(edges_traversed), "desc": f"Duyệt {u} -> {v}"})
+    return steps
 
+def trace_dfs(G, start):
+    steps = []; visited = set(); stack = [start]; edges_traversed = []
+    parent_map = {}
+    while stack:
+        u = stack.pop()
+        if u not in visited:
+            visited.add(u)
+            curr_edges = list(edges_traversed)
+            if u in parent_map: 
+                curr_edges.append((parent_map[u], u)); edges_traversed.append((parent_map[u], u))
+            steps.append({"nodes": list(visited), "edges": curr_edges, "desc": f"Thăm đỉnh {u}"})
+            for v in list(G.neighbors(u))[::-1]: # Đảo ngược để thứ tự tự nhiên hơn
+                if v not in visited: stack.append(v); parent_map[v] = u
+    return steps
+
+def trace_dijkstra(G, start, end):
+    import heapq
+    steps = []; pq = [(0, start, [])]; visited = set()
+    min_dist = {n: float('inf') for n in G.nodes}; min_dist[start] = 0
+    edges_drawn = []
+    while pq:
+        cost, u, path = heapq.heappop(pq)
+        if u not in visited:
+            visited.add(u)
+            if path: edges_drawn.append((path[-1], u))
+            steps.append({"nodes": list(visited), "edges": list(edges_drawn), "desc": f"Chọn {u} (Gần nhất: {cost})"})
+            if u == end: break
+            for v in G.neighbors(u):
+                w = G[u][v].get('weight', 1)
+                if cost + w < min_dist[v]:
+                    min_dist[v] = cost + w
+                    heapq.heappush(pq, (cost + w, v, path + [u]))
+    return steps
+
+def trace_prim(G):
+    steps = []; visited = {list(G.nodes())[0]}; mst_edges = []
+    steps.append({"nodes": list(visited), "edges": [], "desc": "Khởi tạo"})
+    while len(visited) < G.number_of_nodes():
+        candidates = []
+        for u in visited:
+            for v, d in G[u].items():
+                if v not in visited: candidates.append((u, v, d['weight']))
+        if not candidates: break
+        candidates.sort(key=lambda x: x[2])
+        u, v, w = candidates[0]
+        visited.add(v); mst_edges.append((u, v))
+        steps.append({"nodes": list(visited), "edges": list(mst_edges), "desc": f"Thêm cạnh ({u},{v}) w={w}"})
+    return steps
+
+def trace_kruskal(G):
+    steps = []; edges = sorted(G.edges(data=True), key=lambda x: x[2].get('weight', 1))
+    parent = {n: n for n in G.nodes}
+    def find(i): return i if parent[i] == i else find(parent[i])
+    def union(i, j):
+        root_i, root_j = find(i), find(j)
+        if root_i != root_j: parent[root_i] = root_j; return True
+        return False
+    mst_edges = []; nodes_in = set()
+    for u, v, w in edges:
+        if union(u, v):
+            mst_edges.append((u, v)); nodes_in.update([u, v])
+            steps.append({"nodes": list(nodes_in), "edges": list(mst_edges), "desc": f"Chọn ({u},{v}) w={w['weight']}"})
+    return steps
+
+def trace_ford_fulkerson(G, source, sink):
+    steps = []
+    flow_val, flow_dict = nx.maximum_flow(G, source, sink, capacity='weight')
+    edges_flow = []
+    nodes_involved = {source, sink}
+    steps.append({"nodes": list(nodes_involved), "edges": [], "desc": f"Tìm luồng từ {source} -> {sink}"})
+    for u in flow_dict:
+        for v, f in flow_dict[u].items():
+            if f > 0:
+                edges_flow.append((u, v)); nodes_involved.add(u); nodes_involved.add(v)
+                steps.append({"nodes": list(nodes_involved), "edges": list(edges_flow), "desc": f"Đẩy {f} đơn vị qua ({u},{v})"})
+    steps.append({"nodes": list(nodes_involved), "edges": list(edges_flow), "desc": f"Tổng luồng cực đại: {flow_val}"})
+    return steps
+
+def trace_fleury(G):
+    # Dùng lại logic hàm cũ nhưng trả về từng bước
+    if not nx.is_connected(G): return []
+    odd = [v for v, d in G.degree() if d % 2 == 1]
+    if len(odd) not in [0, 2]: return []
+    curr = odd[0] if odd else list(G.nodes())[0]
+    path = [curr]; edges_path = []; G_temp = G.copy()
+    steps = [{"nodes": [curr], "edges": [], "desc": f"Bắt đầu tại {curr}"}]
+    
+    while G_temp.number_of_edges() > 0:
+        neighbors = list(G_temp.neighbors(curr))
+        chosen_v = -1
+        for v in neighbors:
+            if G_temp.degree(curr) == 1: chosen_v = v; break
+            G_temp.remove_edge(curr, v)
+            if nx.has_path(G_temp, curr, v): 
+                chosen_v = v; G_temp.add_edge(curr, v); break
+            else: G_temp.add_edge(curr, v, weight=1)
+        if chosen_v == -1: chosen_v = neighbors[0]
+        if G_temp.has_edge(curr, chosen_v):
+            G_temp.remove_edge(curr, chosen_v)
+            edges_path.append((curr, chosen_v)); path.append(chosen_v)
+            steps.append({"nodes": list(set(path)), "edges": list(edges_path), "desc": f"Đi qua ({curr}, {chosen_v})"})
+            curr = chosen_v
+    return steps
+
+def trace_hierholzer(G):
+    if not nx.is_eulerian(G): return []
+    circuit = list(nx.eulerian_circuit(G))
+    steps = []; edges_done = []; nodes_done = set()
+    steps.append({"nodes": [], "edges": [], "desc": "Bắt đầu Hierholzer"})
+    for i, (u, v) in enumerate(circuit):
+        edges_done.append((u, v)); nodes_done.add(u); nodes_done.add(v)
+        steps.append({"nodes": list(nodes_done), "edges": list(edges_done), "desc": f"Bước {i+1}: Nối cạnh ({u}, {v})"})
+    return steps
 
 # -----------------------------------------------------------------------------
 # GIAO DIỆN CHÍNH CỦA ỨNG DỤNG
@@ -594,6 +718,7 @@ with tab_ban_do:
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
         st_folium(m, width=1200, height=600, returned_objects=[])
+
 
 
 
