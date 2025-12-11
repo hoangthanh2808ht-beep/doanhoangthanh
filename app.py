@@ -100,7 +100,7 @@ if 'tam_ban_do' not in st.session_state: st.session_state['tam_ban_do'] = [13.97
 if 'ten_diem_dau' not in st.session_state: st.session_state['ten_diem_dau'] = "Điểm A"
 if 'ten_diem_cuoi' not in st.session_state: st.session_state['ten_diem_cuoi'] = "Điểm B"
 if 'bounds_ban_do' not in st.session_state: st.session_state['bounds_ban_do'] = None
-if 'log_text' not in st.session_state: st.session_state['log_text'] = "" # Thêm biến lưu vết
+if 'log_text' not in st.session_state: st.session_state['log_text'] = "" 
 
 
 # -----------------------------------------------------------------------------
@@ -614,13 +614,12 @@ with tab_ban_do:
             if coord_start: folium.PolyLine([coord_start, toa_do_duong_di[0]], color="gray", weight=2,
                                             dash_array='5, 5').add_to(m)
 
-            # --- TÍNH NĂNG MỚI: AUTO ZOOM VỪA VẶN LỘ TRÌNH ---
             if 'bounds_ban_do' in st.session_state and st.session_state['bounds_ban_do']:
                 m.fit_bounds(st.session_state['bounds_ban_do'])
 
             st_folium(m, width=900, height=600, returned_objects=[])
 
-    # --- MẶC ĐỊNH KHI MỚI VÀO ---
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
         st_folium(m, width=1200, height=600, returned_objects=[])
+
