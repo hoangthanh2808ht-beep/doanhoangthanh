@@ -7,6 +7,7 @@ import folium
 from folium.plugins import AntPath, Fullscreen
 from streamlit_folium import st_folium
 import warnings
+import time  
 
 warnings.filterwarnings("ignore")
 
@@ -444,13 +445,12 @@ with tab_ban_do:
     def tai_ban_do_pleiku():
         return ox.graph_from_point((13.9800, 108.0000), dist=3000, network_type='drive')
 
-
-    with st.spinner("Đang tải dữ liệu bản đồ TP. Pleiku (bạn chờ xíu ...)"):
+    with st.spinner("Đang tải dữ liệu bản đồ TP. Pleiku..."):
         try:
             Do_thi_Pleiku = tai_ban_do_pleiku()
-            st.success("✅ Đã tải xong bản đồ!")
-        except:
-            st.error("Lỗi tải bản đồ, vui lòng thử lại!")
+            st.success("✅ Đã tải xong bản đồ ")
+        except Exception as e:
+            st.error(f"Lỗi tải bản đồ: {e}")
             st.stop()
 
     st.markdown("### 🔍 Nhập tên địa điểm (Ví dụ: Quảng trường Đại Đoàn Kết, Sân vận động,...)")
@@ -460,61 +460,86 @@ with tab_ban_do:
 
         # Nhập tên thay vì chọn list
         start_query = c1.text_input("📍 Điểm xuất phát:", value="Quảng trường Đại Đoàn Kết")
-        end_query = c2.text_input("🏁 Điểm đến:", value="Sân bay Pleiku")
+        end_query = c2.text_input("🏁 Điểm đến:", value="Cảng hàng không Pleiku")
 
         thuat_toan_tim_duong = c3.selectbox("Thuật toán:", ["Dijkstra", "BFS", "DFS"])
         nut_tim_duong = st.form_submit_button("🚀 TÌM ĐƯỜNG NGAY", type="primary", use_container_width=True)
 
-    if nut_tim_duong:
-        with st.spinner(f"Đang tìm vị trí '{start_query}' và '{end_query}' trên bản đồ..."):
-            try:
+    def tim_toa_do_thong_minh(query):
+        import time # Import ở đây để đảm bảo chạy được ngay
+        
+        ox.settings.user_agent = "he_thong_dan_duong_pleiku_v2"
+        
+        try:
+            lat, lon = map(float, query.split(','))
+            return (lat, lon)
+        except:
+            pass
+            
+        cac_tu_khoa = [
+            query, 
+            f"{query}, Pleiku, Gia Lai", 
+            f"Đường {query}, Pleiku", 
+            f"{query}, Gia Lai, Vietnam"
+        ]
+        
+        for q in cac_tu_khoa:
+            for lan_thu in range(3): # Thử tối đa 3 lần mỗi từ khóa
                 try:
-                    q_start = start_query if "Gia Lai" in start_query else f"{start_query}, Gia Lai, Vietnam"
-                    q_end = end_query if "Gia Lai" in end_query else f"{end_query}, Gia Lai, Vietnam"
+                    return ox.geocode(q) # Nếu tìm thấy thì trả về ngay
+                except:
+                    time.sleep(1.0) # Nếu lỗi, chờ 1 giây rồi thử lại
+                    continue 
+        
+        raise Exception("Không tìm thấy địa điểm")
 
-                    # ox.geocode trả về (lat, lon)
-                    start_point = ox.geocode(q_start)
-                    end_point = ox.geocode(q_end)
-                except Exception:
-                    st.error("❌ Không tìm thấy địa điểm! Hãy thử nhập tên cụ thể hơn.")
+    if nut_tim_duong:
+        st.session_state['lo_trinh_tim_duoc'] = [] # Reset kết quả cũ
+        
+        with st.spinner(f"Đang tìm đường từ '{start_query}' đến '{end_query}'..."):
+            try:
+                # BƯỚC 1: TÌM TỌA ĐỘ (Dùng hàm mới)
+                try:
+                    start_point = tim_toa_do_thong_minh(start_query)
+                except:
+                    st.error(f"❌ Không tìm thấy điểm đi: '{start_query}'. Hãy thử nhập cụ thể hơn (VD: Số nhà + Tên đường).")
                     st.stop()
+                    
+                try:
+                    end_point = tim_toa_do_thong_minh(end_query)
+                except:
+                    st.error(f"❌ Không tìm thấy điểm đến: '{end_query}'.")
+                    st.stop()
+
                 nut_goc = ox.distance.nearest_nodes(Do_thi_Pleiku, start_point[1], start_point[0])
                 nut_dich = ox.distance.nearest_nodes(Do_thi_Pleiku, end_point[1], end_point[0])
 
-                # 3. CHẠY THUẬT TOÁN
                 duong_di = []
                 try:
-                    # 1. TRƯỜNG HỢP DIJKSTRA: Tối ưu theo độ dài thực tế (km)
                     if "Dijkstra" in thuat_toan_tim_duong:
                         duong_di = nx.shortest_path(Do_thi_Pleiku, nut_goc, nut_dich, weight='length')
-                        st.success(f"✅ Đang chạy Dijkstra: Tìm đường ngắn nhất theo quãng đường (km).")
+                        st.success(f"✅ Đã tìm thấy đường (Dijkstra)!")
 
-                    # 2. TRƯỜNG HỢP BFS: Tối ưu theo số lượng nút (đi qua ít ngã rẽ nhất)
                     elif "BFS" in thuat_toan_tim_duong:
-                        # Trong NetworkX, shortest_path với weight=None chính là thuật toán BFS
                         duong_di = nx.shortest_path(Do_thi_Pleiku, nut_goc, nut_dich, weight=None)
-                        st.info(f"✅ Đang chạy BFS : Tìm đường đi qua ít địa điểm trung gian nhất.")
+                        st.info(f"✅ Đã tìm thấy đường (BFS)!")
 
-                    # 3. TRƯỜNG HỢP DFS: Đi theo chiều sâu (Không đảm bảo ngắn nhất)
                     elif "DFS" in thuat_toan_tim_duong:
-
                         cay_dfs = nx.dfs_tree(Do_thi_Pleiku, source=nut_goc)
-
                         if nut_dich in cay_dfs:
                             duong_di = nx.shortest_path(cay_dfs, nut_goc, nut_dich)
-                            st.warning(f"⚠️ Đang chạy DFS: Đường đi có thể rất dài đấy nhóe .")
+                            st.warning(f"⚠️ Đã tìm thấy đường (DFS) - Có thể không tối ưu.")
                         else:
-                            raise nx.NetworkXNoPath  # Không tìm thấy đích trong cây DFS
+                            raise nx.NetworkXNoPath
 
                 except nx.NetworkXNoPath:
-                    st.error(
-                        f"⛔ Không có đường đi từ '{start_query}' đến '{end_query}' (Có thể do đường 1 chiều hoặc khu vực bị cô lập).")
-                    st.session_state['lo_trinh_tim_duoc'] = []
+                    st.error("⛔ Không có đường đi (Do đường cụt, đường 1 chiều hoặc khu vực bị cô lập).")
                     st.stop()
                 except Exception as e:
                     st.error(f"Lỗi thuật toán: {e}")
                     st.stop()
-                # 4. LƯU SESSION
+                
+                # BƯỚC 4: LƯU KẾT QUẢ
                 st.session_state['lo_trinh_tim_duoc'] = duong_di
                 st.session_state['chi_tiet_lo_trinh'] = lay_thong_tin_lo_trinh(Do_thi_Pleiku, duong_di)
                 st.session_state['tam_ban_do'] = [(start_point[0] + end_point[0]) / 2,
@@ -522,16 +547,14 @@ with tab_ban_do:
                 st.session_state['ten_diem_dau'] = start_query
                 st.session_state['ten_diem_cuoi'] = end_query
 
-                # Tính toán giới hạn bản đồ để zoom vừa vặn (Fit Bounds)
                 if duong_di:
                     nodes_data = [Do_thi_Pleiku.nodes[n] for n in duong_di]
                     lats = [d['y'] for d in nodes_data]
                     lons = [d['x'] for d in nodes_data]
-                    # Sw [lat, lon], Ne [lat, lon]
                     st.session_state['bounds_ban_do'] = [[min(lats), min(lons)], [max(lats), max(lons)]]
 
             except Exception as e:
-                st.error(f"Không tìm thấy đường đi hoặc địa điểm: {e}")
+                st.error(f"Lỗi không xác định: {e}")
                 st.session_state['lo_trinh_tim_duoc'] = []
 
     if st.session_state['lo_trinh_tim_duoc']:
@@ -622,4 +645,3 @@ with tab_ban_do:
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
         st_folium(m, width=1200, height=600, returned_objects=[])
-
