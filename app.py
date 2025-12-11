@@ -37,6 +37,20 @@ st.markdown("""
         max-height: 600px;
         overflow-y: auto;
     }
+    
+    /* Khung Log Lưu vết */
+    .khung-log {
+        background-color: #F8F9F9;
+        border: 1px solid #BDC3C7;
+        border-radius: 5px;
+        padding: 10px;
+        font-family: monospace;
+        height: 200px;
+        overflow-y: auto;
+        color: #2C3E50;
+        margin-top: 10px;
+        white-space: pre-wrap;
+    }
 
     /* Các phần tử trong dòng thời gian (Timeline) */
     .dong-thoi-gian {
@@ -86,16 +100,15 @@ if 'tam_ban_do' not in st.session_state: st.session_state['tam_ban_do'] = [13.97
 if 'ten_diem_dau' not in st.session_state: st.session_state['ten_diem_dau'] = "Điểm A"
 if 'ten_diem_cuoi' not in st.session_state: st.session_state['ten_diem_cuoi'] = "Điểm B"
 if 'bounds_ban_do' not in st.session_state: st.session_state['bounds_ban_do'] = None
+if 'log_text' not in st.session_state: st.session_state['log_text'] = "" # Thêm biến lưu vết
 
 
 # -----------------------------------------------------------------------------
 # HÀM XỬ LÝ 1: TRÍCH XUẤT THÔNG TIN LỘ TRÌNH
 # -----------------------------------------------------------------------------
 def lay_du_lieu_canh_an_toan(G, u, v, khoa_trong_so='length'):
-    """Lấy dữ liệu cạnh an toàn cho cả Graph thường và MultiGraph"""
     data = G.get_edge_data(u, v)
     if data is None: return {}
-    # Nếu là MultiGraph (kết quả là dict của các cạnh {0: {}, 1: {}})
     if isinstance(data, dict) and any(isinstance(k, int) for k in data.keys()):
         best = None;
         min_w = float('inf')
@@ -205,155 +218,6 @@ def thuat_toan_fleury(G_input):
             u = next_v
 
     return edges_path, "Thành công"
-# --- CÁC HÀM THUẬT TOÁN TRACE (MÔ PHỎNG TỪNG BƯỚC) ---
-def trace_bfs(G, start):
-    steps = []; visited = {start}; queue = [start]; edges_traversed = []
-    steps.append({"nodes": list(visited), "edges": [], "desc": f"Khởi tạo tại {start}"})
-    while queue:
-        u = queue.pop(0)
-        for v in G.neighbors(u):
-            if v not in visited:
-                visited.add(v); queue.append(v); edges_traversed.append((u, v))
-                steps.append({"nodes": list(visited), "edges": list(edges_traversed), "desc": f"Duyệt {u} -> {v}"})
-    return steps
-
-def trace_dfs(G, start):
-    steps = []; visited = set(); stack = [start]; edges_traversed = []
-    parent_map = {}
-    while stack:
-        u = stack.pop()
-        if u not in visited:
-            visited.add(u)
-            curr_edges = list(edges_traversed)
-            if u in parent_map: 
-                curr_edges.append((parent_map[u], u)); edges_traversed.append((parent_map[u], u))
-            steps.append({"nodes": list(visited), "edges": curr_edges, "desc": f"Thăm đỉnh {u}"})
-            for v in list(G.neighbors(u))[::-1]: # Đảo ngược để thứ tự tự nhiên hơn
-                if v not in visited: stack.append(v); parent_map[v] = u
-    return steps
-
-def trace_dijkstra_improved(G, start, end):
-    import heapq
-    steps = []
-    pq = [(0, start)]
-    dist = {n: float('inf') for n in G.nodes}; dist[start] = 0
-    parent = {}
-    visited = set()
-    steps.append({"nodes": [], "edges": [], "desc": f"Khởi tạo, start={start}"})
-
-    while pq:
-        cost, u = heapq.heappop(pq)
-        if u in visited: 
-            continue
-        visited.add(u)
-        # rebuild path from start->u
-        path = []
-        cur = u
-        while cur in parent:
-            path.append(cur)
-            cur = parent[cur]
-        path = list(reversed(path + [u])) if path else [start] if u==start else [u]
-        steps.append({"nodes": list(visited), "edges": [], "desc": f"Chọn {u} (dist={cost}), path={'->'.join(map(str,path))}"})
-        if u == end:
-            break
-        for v in G.neighbors(u):
-            # handle MultiGraph attribute shape:
-            attr = G.get_edge_data(u, v)
-            w = 1
-            if isinstance(attr, dict) and any(isinstance(k, int) for k in attr.keys()):
-                # MultiEdge: choose min weight among parallel edges
-                w = min([d.get('weight', 1) for d in attr.values()])
-            else:
-                w = attr.get('weight', 1) if isinstance(attr, dict) else 1
-
-            if cost + w < dist.get(v, float('inf')):
-                dist[v] = cost + w
-                parent[v] = u
-                heapq.heappush(pq, (dist[v], v))
-                steps.append({"nodes": list(visited), "edges": [], "desc": f"  Relax {u}->{v}, new_dist={dist[v]}"})
-    return steps
-
-
-def trace_prim(G):
-    steps = []; visited = {list(G.nodes())[0]}; mst_edges = []
-    steps.append({"nodes": list(visited), "edges": [], "desc": "Khởi tạo"})
-    while len(visited) < G.number_of_nodes():
-        candidates = []
-        for u in visited:
-            for v, d in G[u].items():
-                if v not in visited: candidates.append((u, v, d['weight']))
-        if not candidates: break
-        candidates.sort(key=lambda x: x[2])
-        u, v, w = candidates[0]
-        visited.add(v); mst_edges.append((u, v))
-        steps.append({"nodes": list(visited), "edges": list(mst_edges), "desc": f"Thêm cạnh ({u},{v}) w={w}"})
-    return steps
-
-def trace_kruskal(G):
-    steps = []; edges = sorted(G.edges(data=True), key=lambda x: x[2].get('weight', 1))
-    parent = {n: n for n in G.nodes}
-    def find(i): return i if parent[i] == i else find(parent[i])
-    def union(i, j):
-        root_i, root_j = find(i), find(j)
-        if root_i != root_j: parent[root_i] = root_j; return True
-        return False
-    mst_edges = []; nodes_in = set()
-    for u, v, w in edges:
-        if union(u, v):
-            mst_edges.append((u, v)); nodes_in.update([u, v])
-            steps.append({"nodes": list(nodes_in), "edges": list(mst_edges), "desc": f"Chọn ({u},{v}) w={w['weight']}"})
-    return steps
-
-def trace_ford_fulkerson(G, source, sink):
-    steps = []
-    flow_val, flow_dict = nx.maximum_flow(G, source, sink, capacity='weight')
-    edges_flow = []
-    nodes_involved = {source, sink}
-    steps.append({"nodes": list(nodes_involved), "edges": [], "desc": f"Tìm luồng từ {source} -> {sink}"})
-    for u in flow_dict:
-        for v, f in flow_dict[u].items():
-            if f > 0:
-                edges_flow.append((u, v)); nodes_involved.add(u); nodes_involved.add(v)
-                steps.append({"nodes": list(nodes_involved), "edges": list(edges_flow), "desc": f"Đẩy {f} đơn vị qua ({u},{v})"})
-    steps.append({"nodes": list(nodes_involved), "edges": list(edges_flow), "desc": f"Tổng luồng cực đại: {flow_val}"})
-    return steps
-
-def trace_fleury(G):
-    # Dùng lại logic hàm cũ nhưng trả về từng bước
-    if not nx.is_connected(G): return []
-    odd = [v for v, d in G.degree() if d % 2 == 1]
-    if len(odd) not in [0, 2]: return []
-    curr = odd[0] if odd else list(G.nodes())[0]
-    path = [curr]; edges_path = []; G_temp = G.copy()
-    steps = [{"nodes": [curr], "edges": [], "desc": f"Bắt đầu tại {curr}"}]
-    
-    while G_temp.number_of_edges() > 0:
-        neighbors = list(G_temp.neighbors(curr))
-        chosen_v = -1
-        for v in neighbors:
-            if G_temp.degree(curr) == 1: chosen_v = v; break
-            G_temp.remove_edge(curr, v)
-            if nx.has_path(G_temp, curr, v): 
-                chosen_v = v; G_temp.add_edge(curr, v); break
-            else: G_temp.add_edge(curr, v, weight=1)
-        if chosen_v == -1: chosen_v = neighbors[0]
-        if G_temp.has_edge(curr, chosen_v):
-            G_temp.remove_edge(curr, chosen_v)
-            edges_path.append((curr, chosen_v)); path.append(chosen_v)
-            steps.append({"nodes": list(set(path)), "edges": list(edges_path), "desc": f"Đi qua ({curr}, {chosen_v})"})
-            curr = chosen_v
-    return steps
-
-def trace_hierholzer(G):
-    if not nx.is_eulerian(G): return []
-    circuit = list(nx.eulerian_circuit(G))
-    steps = []; edges_done = []; nodes_done = set()
-    steps.append({"nodes": [], "edges": [], "desc": "Bắt đầu Hierholzer"})
-    for i, (u, v) in enumerate(circuit):
-        edges_done.append((u, v)); nodes_done.add(u); nodes_done.add(v)
-        steps.append({"nodes": list(nodes_done), "edges": list(edges_done), "desc": f"Bước {i+1}: Nối cạnh ({u}, {v})"})
-    return steps
-
 # -----------------------------------------------------------------------------
 # GIAO DIỆN CHÍNH CỦA ỨNG DỤNG
 # -----------------------------------------------------------------------------
@@ -388,6 +252,7 @@ with tab_ly_thuyet:
                             G_moi.add_edge(u, v, weight=trong_so)
 
                     st.session_state['do_thi'] = G_moi
+                    st.session_state['log_text'] = "Đã khởi tạo đồ thị mới.\n" # Reset log
                     st.success("Tạo thành công!")
                 except ValueError:
                     st.error("Lỗi: Trọng số phải là số nguyên!")
@@ -402,6 +267,10 @@ with tab_ly_thuyet:
                 mime="text/plain",
                 use_container_width=True
             )
+        
+        # Thêm khu vực hiển thị Log
+        st.subheader("📜 Log chạy thuật toán")
+        st.markdown(f'<div class="khung-log">{st.session_state["log_text"]}</div>', unsafe_allow_html=True)
 
     with cot_phai:
         if len(st.session_state['do_thi']) > 0:
@@ -455,13 +324,14 @@ with tab_ly_thuyet:
             st.warning("2. Thuật toán Tìm kiếm ")
             nut_bat_dau = st.selectbox("Điểm bắt đầu:", list(st.session_state['do_thi'].nodes()))
             nut_ket_thuc = st.selectbox("Điểm kết thúc:", list(st.session_state['do_thi'].nodes()),
-                                        index=len(st.session_state['do_thi'].nodes()) - 1)
+                                            index=len(st.session_state['do_thi'].nodes()) - 1)
 
             c2a, c2b = st.columns(2)
             with c2a:
                 if st.button("Chạy BFS"):
                     try:
                         edges_bfs = list(nx.bfs_tree(st.session_state['do_thi'], nut_bat_dau).edges())
+                        st.session_state['log_text'] = f"--- BFS từ {nut_bat_dau} ---\nThứ tự duyệt: {edges_bfs}\n" # Log trace
                         ve_do_thi_ly_thuyet(st.session_state['do_thi'], danh_sach_canh=edges_bfs, tieu_de="Duyệt BFS")
                     except:
                         st.error("Lỗi chạy BFS")
@@ -469,6 +339,7 @@ with tab_ly_thuyet:
                 if st.button("Chạy DFS"):
                     try:
                         edges_dfs = list(nx.dfs_tree(st.session_state['do_thi'], nut_bat_dau).edges())
+                        st.session_state['log_text'] = f"--- DFS từ {nut_bat_dau} ---\nThứ tự duyệt: {edges_dfs}\n" # Log trace
                         ve_do_thi_ly_thuyet(st.session_state['do_thi'], danh_sach_canh=edges_dfs, tieu_de="Duyệt DFS")
                     except:
                         st.error("Lỗi chạy DFS")
@@ -477,6 +348,8 @@ with tab_ly_thuyet:
                 try:
                     duong_ngan_nhat = nx.shortest_path(st.session_state['do_thi'], nut_bat_dau, nut_ket_thuc,
                                                        weight='weight')
+                    chi_phi = nx.shortest_path_length(st.session_state['do_thi'], nut_bat_dau, nut_ket_thuc, weight='weight')
+                    st.session_state['log_text'] = f"--- Dijkstra ({nut_bat_dau} -> {nut_ket_thuc}) ---\nĐường đi: {duong_ngan_nhat}\nTổng trọng số: {chi_phi}\n" # Log trace
                     ve_do_thi_ly_thuyet(st.session_state['do_thi'], duong_di=duong_ngan_nhat,
                                         tieu_de="Đường đi ngắn nhất (Dijkstra)")
                 except:
@@ -490,6 +363,7 @@ with tab_ly_thuyet:
                 if st.button(" Prim"):
                     if not co_huong and nx.is_connected(st.session_state['do_thi']):
                         cay = nx.minimum_spanning_tree(st.session_state['do_thi'], algorithm='prim')
+                        st.session_state['log_text'] = f"--- Prim MST ---\nCác cạnh trong cây khung: {list(cay.edges())}\nTổng trọng số: {cay.size(weight='weight')}\n" # Log trace
                         ve_do_thi_ly_thuyet(st.session_state['do_thi'], danh_sach_canh=list(cay.edges()),
                                             tieu_de=f"Prim MST (W={cay.size(weight='weight')})")
                     else:
@@ -498,6 +372,7 @@ with tab_ly_thuyet:
                 if st.button(" Kruskal"):
                     if not co_huong and nx.is_connected(st.session_state['do_thi']):
                         cay = nx.minimum_spanning_tree(st.session_state['do_thi'], algorithm='kruskal')
+                        st.session_state['log_text'] = f"--- Kruskal MST ---\nCác cạnh trong cây khung: {list(cay.edges())}\nTổng trọng số: {cay.size(weight='weight')}\n" # Log trace
                         ve_do_thi_ly_thuyet(st.session_state['do_thi'], danh_sach_canh=list(cay.edges()),
                                             tieu_de=f"Kruskal MST (W={cay.size(weight='weight')})")
                     else:
@@ -510,9 +385,13 @@ with tab_ly_thuyet:
                         val, flow_dict = nx.maximum_flow(st.session_state['do_thi'], nut_bat_dau, nut_ket_thuc,
                                                          capacity='weight')
                         canh_luong = []
+                        log_flow = ""
                         for u in flow_dict:
                             for v, f in flow_dict[u].items():
-                                if f > 0: canh_luong.append((u, v))
+                                if f > 0: 
+                                    canh_luong.append((u, v))
+                                    log_flow += f"({u}->{v}: {f}), "
+                        st.session_state['log_text'] = f"--- Ford-Fulkerson ---\nLuồng cực đại: {val}\nChi tiết luồng: {log_flow}\n" # Log trace
                         ve_do_thi_ly_thuyet(st.session_state['do_thi'], danh_sach_canh=canh_luong,
                                             tieu_de=f"Luồng cực đại: {val}")
                     except Exception as e:
@@ -533,6 +412,7 @@ with tab_ly_thuyet:
                         with st.spinner("Đang chạy Fleury ..."):
                             ds_canh, msg = thuat_toan_fleury(st.session_state['do_thi'])
                             if ds_canh:
+                                st.session_state['log_text'] = f"--- Fleury ---\nChu trình/Đường đi Euler: {ds_canh}\n" # Log trace
                                 st.info(f"Kết quả Fleury: {ds_canh}")
                                 ve_do_thi_ly_thuyet(st.session_state['do_thi'], danh_sach_canh=ds_canh,
                                                     tieu_de="Fleury")
@@ -545,6 +425,7 @@ with tab_ly_thuyet:
                         if nx.is_eulerian(st.session_state['do_thi']):
                             ct = list(nx.eulerian_circuit(st.session_state['do_thi']))
                             ds_canh = [(u, v) for u, v in ct]
+                            st.session_state['log_text'] = f"--- Hierholzer ---\nChu trình Euler: {ds_canh}\n" # Log trace
                             st.success(f"Chu trình Euler (Hierholzer): {ds_canh}")
                             ve_do_thi_ly_thuyet(st.session_state['do_thi'], danh_sach_canh=ds_canh,
                                                 tieu_de="Hierholzer Circuit")
@@ -741,9 +622,3 @@ with tab_ban_do:
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
         st_folium(m, width=1200, height=600, returned_objects=[])
-
-
-
-
-
-
