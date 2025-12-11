@@ -7,7 +7,6 @@ import folium
 from folium.plugins import AntPath, Fullscreen
 from streamlit_folium import st_folium
 import warnings
-import time  
 
 warnings.filterwarnings("ignore")
 
@@ -101,7 +100,7 @@ if 'tam_ban_do' not in st.session_state: st.session_state['tam_ban_do'] = [13.97
 if 'ten_diem_dau' not in st.session_state: st.session_state['ten_diem_dau'] = "Điểm A"
 if 'ten_diem_cuoi' not in st.session_state: st.session_state['ten_diem_cuoi'] = "Điểm B"
 if 'bounds_ban_do' not in st.session_state: st.session_state['bounds_ban_do'] = None
-if 'log_text' not in st.session_state: st.session_state['log_text'] = "" 
+if 'log_text' not in st.session_state: st.session_state['log_text'] = "" # Thêm biến lưu vết
 
 
 # -----------------------------------------------------------------------------
@@ -269,6 +268,7 @@ with tab_ly_thuyet:
                 use_container_width=True
             )
         
+
     with cot_phai:
         if len(st.session_state['do_thi']) > 0:
             ve_do_thi_ly_thuyet(st.session_state['do_thi'], tieu_de="Hình ảnh trực quan")
@@ -445,12 +445,13 @@ with tab_ban_do:
     def tai_ban_do_pleiku():
         return ox.graph_from_point((13.9800, 108.0000), dist=3000, network_type='drive')
 
-    with st.spinner("Đang tải dữ liệu bản đồ TP. Pleiku..."):
+
+    with st.spinner("Đang tải dữ liệu bản đồ TP. Pleiku (bạn chờ xíu ...)"):
         try:
             Do_thi_Pleiku = tai_ban_do_pleiku()
-            st.success("✅ Đã tải xong bản đồ ")
-        except Exception as e:
-            st.error(f"Lỗi tải bản đồ: {e}")
+            st.success("✅ Đã tải xong bản đồ!")
+        except:
+            st.error("Lỗi tải bản đồ, vui lòng thử lại!")
             st.stop()
 
     st.markdown("### 🔍 Nhập tên địa điểm (Ví dụ: Quảng trường Đại Đoàn Kết, Sân vận động,...)")
@@ -460,86 +461,58 @@ with tab_ban_do:
 
         # Nhập tên thay vì chọn list
         start_query = c1.text_input("📍 Điểm xuất phát:", value="Quảng trường Đại Đoàn Kết")
-        end_query = c2.text_input("🏁 Điểm đến:", value="Cảng hàng không Pleiku")
+        end_query = c2.text_input("🏁 Điểm đến:", value="Sân bay Pleiku")
 
         thuat_toan_tim_duong = c3.selectbox("Thuật toán:", ["Dijkstra", "BFS", "DFS"])
         nut_tim_duong = st.form_submit_button("🚀 TÌM ĐƯỜNG NGAY", type="primary", use_container_width=True)
 
-    def tim_toa_do_thong_minh(query):
-        import time # Import ở đây để đảm bảo chạy được ngay
-        
-        ox.settings.user_agent = "he_thong_dan_duong_pleiku_v2"
-        
-        try:
-            lat, lon = map(float, query.split(','))
-            return (lat, lon)
-        except:
-            pass
-            
-        cac_tu_khoa = [
-            query, 
-            f"{query}, Pleiku, Gia Lai", 
-            f"Đường {query}, Pleiku", 
-            f"{query}, Gia Lai, Vietnam"
-        ]
-        
-        for q in cac_tu_khoa:
-            for lan_thu in range(3): # Thử tối đa 3 lần mỗi từ khóa
-                try:
-                    return ox.geocode(q) # Nếu tìm thấy thì trả về ngay
-                except:
-                    time.sleep(1.0) # Nếu lỗi, chờ 1 giây rồi thử lại
-                    continue 
-        
-        raise Exception("Không tìm thấy địa điểm")
-
     if nut_tim_duong:
-        st.session_state['lo_trinh_tim_duoc'] = [] # Reset kết quả cũ
-        
-        with st.spinner(f"Đang tìm đường từ '{start_query}' đến '{end_query}'..."):
+        with st.spinner(f"Đang tìm vị trí '{start_query}' và '{end_query}' trên bản đồ..."):
             try:
-                # BƯỚC 1: TÌM TỌA ĐỘ (Dùng hàm mới)
                 try:
-                    start_point = tim_toa_do_thong_minh(start_query)
-                except:
-                    st.error(f"❌ Không tìm thấy điểm đi: '{start_query}'. Hãy thử nhập cụ thể hơn (VD: Số nhà + Tên đường).")
-                    st.stop()
-                    
-                try:
-                    end_point = tim_toa_do_thong_minh(end_query)
-                except:
-                    st.error(f"❌ Không tìm thấy điểm đến: '{end_query}'.")
-                    st.stop()
+                    q_start = start_query if "Gia Lai" in start_query else f"{start_query}, Gia Lai, Vietnam"
+                    q_end = end_query if "Gia Lai" in end_query else f"{end_query}, Gia Lai, Vietnam"
 
+                    # ox.geocode trả về (lat, lon)
+                    start_point = ox.geocode(q_start)
+                    end_point = ox.geocode(q_end)
+                except Exception:
+                    st.error("❌ Không tìm thấy địa điểm! Hãy thử nhập tên cụ thể hơn.")
+                    st.stop()
                 nut_goc = ox.distance.nearest_nodes(Do_thi_Pleiku, start_point[1], start_point[0])
                 nut_dich = ox.distance.nearest_nodes(Do_thi_Pleiku, end_point[1], end_point[0])
 
+                # 3. CHẠY THUẬT TOÁN
                 duong_di = []
                 try:
                     if "Dijkstra" in thuat_toan_tim_duong:
                         duong_di = nx.shortest_path(Do_thi_Pleiku, nut_goc, nut_dich, weight='length')
-                        st.success(f"✅ Đã tìm thấy đường (Dijkstra)!")
+                        st.success(f"✅ Đang chạy Dijkstra: Tìm đường ngắn nhất theo quãng đường (km).")
 
                     elif "BFS" in thuat_toan_tim_duong:
+                        # Trong NetworkX, shortest_path với weight=None chính là thuật toán BFS
                         duong_di = nx.shortest_path(Do_thi_Pleiku, nut_goc, nut_dich, weight=None)
-                        st.info(f"✅ Đã tìm thấy đường (BFS)!")
+                        st.info(f"✅ Đang chạy BFS : Tìm đường đi qua ít địa điểm trung gian nhất.")
 
                     elif "DFS" in thuat_toan_tim_duong:
+
                         cay_dfs = nx.dfs_tree(Do_thi_Pleiku, source=nut_goc)
+
                         if nut_dich in cay_dfs:
                             duong_di = nx.shortest_path(cay_dfs, nut_goc, nut_dich)
-                            st.warning(f"⚠️ Đã tìm thấy đường (DFS) - Có thể không tối ưu.")
+                            st.warning(f"⚠️ Đang chạy DFS: Đường đi có thể rất dài đấy nhóe .")
                         else:
-                            raise nx.NetworkXNoPath
+                            raise nx.NetworkXNoPath  # Không tìm thấy đích trong cây DFS
 
                 except nx.NetworkXNoPath:
-                    st.error("⛔ Không có đường đi (Do đường cụt, đường 1 chiều hoặc khu vực bị cô lập).")
+                    st.error(
+                        f"⛔ Không có đường đi từ '{start_query}' đến '{end_query}' (Có thể do đường 1 chiều hoặc khu vực bị cô lập).")
+                    st.session_state['lo_trinh_tim_duoc'] = []
                     st.stop()
                 except Exception as e:
                     st.error(f"Lỗi thuật toán: {e}")
                     st.stop()
-                
-                # BƯỚC 4: LƯU KẾT QUẢ
+                # 4. LƯU SESSION
                 st.session_state['lo_trinh_tim_duoc'] = duong_di
                 st.session_state['chi_tiet_lo_trinh'] = lay_thong_tin_lo_trinh(Do_thi_Pleiku, duong_di)
                 st.session_state['tam_ban_do'] = [(start_point[0] + end_point[0]) / 2,
@@ -551,10 +524,11 @@ with tab_ban_do:
                     nodes_data = [Do_thi_Pleiku.nodes[n] for n in duong_di]
                     lats = [d['y'] for d in nodes_data]
                     lons = [d['x'] for d in nodes_data]
+                    # Sw [lat, lon], Ne [lat, lon]
                     st.session_state['bounds_ban_do'] = [[min(lats), min(lons)], [max(lats), max(lons)]]
 
             except Exception as e:
-                st.error(f"Lỗi không xác định: {e}")
+                st.error(f"Không tìm thấy đường đi hoặc địa điểm: {e}")
                 st.session_state['lo_trinh_tim_duoc'] = []
 
     if st.session_state['lo_trinh_tim_duoc']:
@@ -637,6 +611,7 @@ with tab_ban_do:
             if coord_start: folium.PolyLine([coord_start, toa_do_duong_di[0]], color="gray", weight=2,
                                             dash_array='5, 5').add_to(m)
 
+            # --- TÍNH NĂNG MỚI: AUTO ZOOM VỪA VẶN LỘ TRÌNH ---
             if 'bounds_ban_do' in st.session_state and st.session_state['bounds_ban_do']:
                 m.fit_bounds(st.session_state['bounds_ban_do'])
 
