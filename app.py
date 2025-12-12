@@ -480,8 +480,8 @@ with tab_ban_do:
         with st.spinner(f"Đang tìm vị trí '{start_query}' và '{end_query}' trên bản đồ..."):
             try:
                 try:
-                    q_start = start_query if "Gia Lai" in start_query else f"{start_query}, Pleiku, Gia Lai, Việt Nam"
-                    q_end   = end_query   if "Gia Lai" in end_query   else f"{end_query}, Pleiku, Gia Lai, Việt Nam"
+                    q_start = start_query if "Gia Lai" in start_query else f"{start_query}, Gia Lai, Viet Nam"
+                    q_end   = end_query   if "Gia Lai" in end_query   else f"{end_query}, Gia Lai, Viet Nam"
 
 
                     # ox.geocode trả về (lat, lon)
@@ -629,5 +629,6 @@ with tab_ban_do:
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
         st_folium(m, width=1200, height=600, returned_objects=[])
+
 
 
