@@ -144,7 +144,7 @@ def lay_thong_tin_lo_trinh(do_thi, danh_sach_nut):
 
 
 # -----------------------------------------------------------------------------
-# HÀM XỬ LÝ 2: VẼ ĐỒ THỊ LÝ THUYẾT (TAB 1) - ĐÃ SỬA
+# HÀM XỬ LÝ 2: VẼ ĐỒ THỊ LÝ THUYẾT (TAB 1) 
 # -----------------------------------------------------------------------------
 def ve_do_thi_ly_thuyet(do_thi, duong_di=None, danh_sach_canh=None, tieu_de=""):
     is_directed = do_thi.is_directed()
@@ -155,7 +155,6 @@ def ve_do_thi_ly_thuyet(do_thi, duong_di=None, danh_sach_canh=None, tieu_de=""):
         nx.draw(do_thi, vi_tri, with_labels=True, node_color='#D6EAF8', edge_color='#BDC3C7', node_size=600,
                 font_weight='bold', ax=truc, arrows=is_directed)
         
-        # --- CHỈ VẼ TRỌNG SỐ NẾU ĐỒ THỊ CÓ TRỌNG SỐ ---
         # Kiểm tra xem có cạnh nào có thuộc tính 'weight' không
         co_trong_so = any('weight' in data for u, v, data in do_thi.edges(data=True))
         if co_trong_so:
@@ -267,7 +266,6 @@ with tab_ly_thuyet:
                         if len(phan) >= 2:
                             u, v = phan[0], phan[1]
                             
-                            # --- SỬA LOGIC KHỞI TẠO ---
                             if co_trong_so_input:
                                 # Nếu chọn có trọng số: Cố gắng lấy số thứ 3, không có thì mặc định 1
                                 trong_so = int(phan[2]) if len(phan) > 2 else 1
@@ -666,3 +664,4 @@ with tab_ban_do:
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
         st_folium(m, width=1200, height=600, returned_objects=[])
+
