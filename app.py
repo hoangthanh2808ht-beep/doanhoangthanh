@@ -144,7 +144,7 @@ def lay_thong_tin_lo_trinh(do_thi, danh_sach_nut):
 
 
 # -----------------------------------------------------------------------------
-# HÀM XỬ LÝ 2: VẼ ĐỒ THỊ LÝ THUYẾT (TAB 1)
+# HÀM XỬ LÝ 2: VẼ ĐỒ THỊ LÝ THUYẾT (TAB 1) - ĐÃ SỬA
 # -----------------------------------------------------------------------------
 def ve_do_thi_ly_thuyet(do_thi, duong_di=None, danh_sach_canh=None, tieu_de=""):
     is_directed = do_thi.is_directed()
@@ -154,8 +154,14 @@ def ve_do_thi_ly_thuyet(do_thi, duong_di=None, danh_sach_canh=None, tieu_de=""):
         vi_tri = nx.spring_layout(do_thi, seed=42)
         nx.draw(do_thi, vi_tri, with_labels=True, node_color='#D6EAF8', edge_color='#BDC3C7', node_size=600,
                 font_weight='bold', ax=truc, arrows=is_directed)
-        nhan_canh = nx.get_edge_attributes(do_thi, 'weight')
-        nx.draw_networkx_edge_labels(do_thi, vi_tri, edge_labels=nhan_canh, font_size=9, ax=truc)
+        
+        # --- CHỈ VẼ TRỌNG SỐ NẾU ĐỒ THỊ CÓ TRỌNG SỐ ---
+        # Kiểm tra xem có cạnh nào có thuộc tính 'weight' không
+        co_trong_so = any('weight' in data for u, v, data in do_thi.edges(data=True))
+        if co_trong_so:
+            nhan_canh = nx.get_edge_attributes(do_thi, 'weight')
+            nx.draw_networkx_edge_labels(do_thi, vi_tri, edge_labels=nhan_canh, font_size=9, ax=truc)
+        # ----------------------------------------------
 
         if duong_di:
             canh_duong_di = list(zip(duong_di, duong_di[1:]))
@@ -236,8 +242,17 @@ with tab_ly_thuyet:
 
     with cot_trai:
         st.subheader("🛠️ Cấu hình Đồ thị")
-        loai_do_thi = st.radio("Chọn loại:", ["Vô hướng", "Có hướng"], horizontal=True)
+        
+        # --- SỬA PHẦN NÀY: THÊM LỰA CHỌN CÓ/KHÔNG TRỌNG SỐ ---
+        c_sel_1, c_sel_2 = st.columns(2)
+        with c_sel_1:
+            loai_do_thi = st.radio("Hướng:", ["Vô hướng", "Có hướng"], horizontal=True)
+        with c_sel_2:
+            kieu_trong_so = st.radio("Trọng số:", ["Có trọng số", "Không trọng số"], horizontal=True)
+        
         co_huong = True if loai_do_thi == "Có hướng" else False
+        co_trong_so_input = True if kieu_trong_so == "Có trọng số" else False
+        # ------------------------------------------------------
 
         mac_dinh = "A B 4\nA C 2\nB C 5\nB D 10\nC E 3\nD F 11\nE D 4\nC D 1"
         du_lieu_nhap = st.text_area("Nhập danh sách cạnh (u v w):", mac_dinh, height=150)
@@ -251,8 +266,16 @@ with tab_ly_thuyet:
                         phan = dong.split()
                         if len(phan) >= 2:
                             u, v = phan[0], phan[1]
-                            trong_so = int(phan[2]) if len(phan) > 2 else 1
-                            G_moi.add_edge(u, v, weight=trong_so)
+                            
+                            # --- SỬA LOGIC KHỞI TẠO ---
+                            if co_trong_so_input:
+                                # Nếu chọn có trọng số: Cố gắng lấy số thứ 3, không có thì mặc định 1
+                                trong_so = int(phan[2]) if len(phan) > 2 else 1
+                                G_moi.add_edge(u, v, weight=trong_so)
+                            else:
+                                # Nếu chọn không trọng số: Chỉ thêm cạnh, KHÔNG thêm thuộc tính weight
+                                G_moi.add_edge(u, v)
+                            # --------------------------
 
                     st.session_state['do_thi'] = G_moi
                     st.session_state['log_text'] = "Đã khởi tạo đồ thị mới.\n"  # Reset log
@@ -293,7 +316,8 @@ with tab_ly_thuyet:
                 adj_raw = nx.to_dict_of_dicts(st.session_state['do_thi'])
                 table_data = []
                 for node, neighbors in adj_raw.items():
-                    neighbors_str = ", ".join([f"{n} (w={w.get('weight', 1)})" for n, w in neighbors.items()])
+                    # Hiển thị trọng số nếu có, không thì để trống
+                    neighbors_str = ", ".join([f"{n} (w={w.get('weight', 'N/A')})" for n, w in neighbors.items()])
                     table_data.append({"Đỉnh nguồn": node, "Các đỉnh kề & Trọng số": neighbors_str})
 
                 if table_data:
@@ -307,7 +331,7 @@ with tab_ly_thuyet:
                     data_canh.append({
                         "Đỉnh đầu": u,
                         "Đỉnh cuối": v,
-                        "Trọng số": data.get('weight', 1)
+                        "Trọng số": data.get('weight', 'Không có') # Hiển thị 'Không có' nếu không trọng số
                     })
 
                 if data_canh:
@@ -347,14 +371,19 @@ with tab_ly_thuyet:
 
             if st.button("Chạy Dijkstra"):
                 try:
+                    # Nếu đồ thị không có trọng số, Dijkstra sẽ coi như trọng số = 1 (mặc định của NetworkX)
                     duong_ngan_nhat = nx.shortest_path(st.session_state['do_thi'], nut_bat_dau, nut_ket_thuc,
                                                        weight='weight')
-                    chi_phi = nx.shortest_path_length(st.session_state['do_thi'], nut_bat_dau, nut_ket_thuc,
-                                                      weight='weight')
+                    try:
+                        chi_phi = nx.shortest_path_length(st.session_state['do_thi'], nut_bat_dau, nut_ket_thuc,
+                                                        weight='weight')
+                    except:
+                        chi_phi = len(duong_ngan_nhat) - 1 # Fallback nếu không tính được length theo weight
+
                     st.session_state[
                         'log_text'] = f"--- Dijkstra ({nut_bat_dau} -> {nut_ket_thuc}) ---\nĐường đi: {duong_ngan_nhat}\nTổng trọng số: {chi_phi}\n"  # Log trace
                     ve_do_thi_ly_thuyet(st.session_state['do_thi'], duong_di=duong_ngan_nhat,
-                                        tieu_de="Đường đi ngắn nhất (Dijkstra)")
+                                        tieu_de=f"Đường đi ngắn nhất (Dijkstra) - W={chi_phi}")
                 except:
                     st.error("Không tìm thấy đường đi!")
 
@@ -366,20 +395,22 @@ with tab_ly_thuyet:
                 if st.button(" Prim"):
                     if not co_huong and nx.is_connected(st.session_state['do_thi']):
                         cay = nx.minimum_spanning_tree(st.session_state['do_thi'], algorithm='prim')
+                        w_cay = cay.size(weight='weight') # Sẽ trả về số cạnh nếu không có trọng số
                         st.session_state[
-                            'log_text'] = f"--- Prim MST ---\nCác cạnh trong cây khung: {list(cay.edges())}\nTổng trọng số: {cay.size(weight='weight')}\n"  # Log trace
+                            'log_text'] = f"--- Prim MST ---\nCác cạnh trong cây khung: {list(cay.edges())}\nTổng trọng số: {w_cay}\n"  # Log trace
                         ve_do_thi_ly_thuyet(st.session_state['do_thi'], danh_sach_canh=list(cay.edges()),
-                                            tieu_de=f"Prim MST (W={cay.size(weight='weight')})")
+                                            tieu_de=f"Prim MST (W={w_cay})")
                     else:
                         st.error("Lỗi: Chỉ áp dụng cho đồ thị Vô hướng & Liên thông")
             with cot_k2:
                 if st.button(" Kruskal"):
                     if not co_huong and nx.is_connected(st.session_state['do_thi']):
                         cay = nx.minimum_spanning_tree(st.session_state['do_thi'], algorithm='kruskal')
+                        w_cay = cay.size(weight='weight')
                         st.session_state[
-                            'log_text'] = f"--- Kruskal MST ---\nCác cạnh trong cây khung: {list(cay.edges())}\nTổng trọng số: {cay.size(weight='weight')}\n"  # Log trace
+                            'log_text'] = f"--- Kruskal MST ---\nCác cạnh trong cây khung: {list(cay.edges())}\nTổng trọng số: {w_cay}\n"  # Log trace
                         ve_do_thi_ly_thuyet(st.session_state['do_thi'], danh_sach_canh=list(cay.edges()),
-                                            tieu_de=f"Kruskal MST (W={cay.size(weight='weight')})")
+                                            tieu_de=f"Kruskal MST (W={w_cay})")
                     else:
                         st.error("Lỗi: Chỉ áp dụng cho đồ thị Vô hướng & Liên thông")
 
@@ -387,7 +418,13 @@ with tab_ly_thuyet:
                 is_directed_actual = st.session_state['do_thi'].is_directed()
                 if is_directed_actual:
                     try:
-                        val, flow_dict = nx.maximum_flow(st.session_state['do_thi'], nut_bat_dau, nut_ket_thuc,
+                        # Ford-Fulkerson cần capacity, ta lấy weight làm capacity
+                        # Nếu không có weight (không trọng số), ta gán capacity = 1 tạm thời để chạy
+                        G_ff = st.session_state['do_thi'].copy()
+                        if not co_trong_so_input:
+                             nx.set_edge_attributes(G_ff, 1, 'weight')
+
+                        val, flow_dict = nx.maximum_flow(G_ff, nut_bat_dau, nut_ket_thuc,
                                                          capacity='weight')
                         canh_luong = []
                         log_flow = ""
@@ -629,7 +666,3 @@ with tab_ban_do:
     else:
         m = folium.Map(location=[13.9785, 108.0051], zoom_start=14, tiles="OpenStreetMap")
         st_folium(m, width=1200, height=600, returned_objects=[])
-
-
-
-
